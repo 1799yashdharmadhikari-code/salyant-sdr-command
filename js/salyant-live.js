@@ -39,10 +39,34 @@
         ? response.accounts
         : [];
 
-    return rows.map(account => ({
-      ...ACCOUNT_META[account.id],
-      ...account
-    }));
+    const EMAIL_TO_ID = {
+      'hr@salyant.co.uk': 'acc-hr',
+      'yash@salyant.co.uk': 'acc-main',
+      'automate@salyant.net': 'acc-sales-net',
+      'ai@thesalyantway.co.uk': 'acc-sales-way'
+    };
+
+    return rows.map(account => {
+      const email =
+        account.id ||
+        account.addr ||
+        account.email ||
+        account.emailAddress ||
+        account.address ||
+        '';
+
+      const id =
+        ACCOUNT_META[email]?.id ||
+        EMAIL_TO_ID[email] ||
+        account.id ||
+        null;
+
+      return {
+        ...(ACCOUNT_META[id] || {}),
+        ...account,
+        id
+      };
+    }).filter(account => account.id);
   }
 
   function normalizeMail(response) {
