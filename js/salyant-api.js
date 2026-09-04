@@ -55,15 +55,8 @@ window.SalyantAPI = {
   },
 
   mail(account, limit = 25) {
-    const ACCOUNT_MAP = {
-      'acc-hr': 'hr@salyant.co.uk',
-      'acc-main': 'yash@salyant.co.uk',
-      'acc-sales-net': 'automate@salyant.net',
-      'acc-sales-way': 'ai@thesalyantway.co.uk'
-    };
-
     const params = new URLSearchParams({
-      account: ACCOUNT_MAP[account] || account,
+      account,
       limit: String(limit)
     });
 
