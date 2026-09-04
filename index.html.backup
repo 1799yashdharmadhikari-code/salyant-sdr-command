@@ -388,8 +388,6 @@ html[data-theme="light"] .brand-mark{filter:none;}
 .note-card .note-del:hover{color:var(--danger);}
 .notes-empty{color:var(--muted-2);font-size:12.5px;padding:20px 4px;text-align:center;}
 </style>
-  <script src="/js/salyant-api.js"></script>
-  <script src="/js/salyant-live.js"></script>
 </head>
 <body>
 <div class="orbs"><div class="orb orb1"></div><div class="orb orb2"></div><div class="orb orb3"></div></div>
@@ -576,7 +574,7 @@ html[data-theme="light"] .brand-mark{filter:none;}
 
     <div class="settings-pop" id="settingsPop">
       <label>n8n Chat Webhook URL</label>
-      <input type="text" id="webhookInput" placeholder="Connected automatically through Vercel">
+      <input type="text" id="webhookInput" placeholder="https://your-n8n-host/webhook/6d632914-...">
       <div class="hint">Paste the Production URL from the Chat Trigger node to connect this panel to <b style="color:var(--muted)">Your First AI Agent</b> live. Kept in memory only for this session — the real backend (message sync, send actions) can be wired up after this UI is approved.</div>
       <div class="row">
         <button class="btn-primary" id="saveWebhook">Connect</button>
@@ -874,7 +872,7 @@ function renderReadingPane(acc, msg){
 const chatLog = document.getElementById('chatLog');
 const agentDot = document.getElementById('agentDot');
 const agentSub = document.getElementById('agentSub');
-let webhookUrl = window.SALYANT_API?.chat || '/api/salyant-sdr/chat';
+let webhookUrl = '';
 
 function addBubble(role, text){
   const el = document.createElement('div');
@@ -890,7 +888,7 @@ function addBubble(role, text){
 function escapeHtml(str){ const d=document.createElement('div'); d.textContent=str; return d.innerHTML; }
 
 addBubble('agent', 'Hello Director. How can I assist you today?');
-addBubble('system', 'Salyant SDR backend connected — AI agent ready');
+addBubble('system', 'Chat not yet connected — open ⚙ to paste your n8n webhook URL');
 
 function renderChips(){
   const scroll = document.getElementById('chipScroll');
@@ -928,7 +926,7 @@ async function sendChat(){
   input.value=''; input.style.height='auto';
 
   if (!webhookUrl){
-    addBubble('agent', "The SDR backend is not configured.");
+    addBubble('agent', "I'm not connected to the workflow yet. Click ⚙ above and paste the Chat Trigger's Production webhook URL to wire me up live.");
     return;
   }
   const typingEl = document.createElement('div');
@@ -948,7 +946,7 @@ async function sendChat(){
     addBubble('agent', reply);
   }catch(err){
     typingEl.remove();
-    addBubble('agent', "Couldn't reach the SDR backend ("+err.message+").");
+    addBubble('agent', "Couldn't reach the workflow ("+err.message+"). Check the webhook URL is the live Production URL and that n8n allows requests from this page.");
   }
 }
 document.getElementById('sendBtn').addEventListener('click', sendChat);
@@ -960,11 +958,13 @@ const settingsPop = document.getElementById('settingsPop');
 document.getElementById('settingsToggle').addEventListener('click', ()=> settingsPop.classList.toggle('open'));
 document.getElementById('closeSettings').addEventListener('click', ()=> settingsPop.classList.remove('open'));
 document.getElementById('saveWebhook').addEventListener('click', ()=>{
-  webhookUrl = window.SALYANT_API?.chat || '/api/salyant-sdr/chat';
+  const val = document.getElementById('webhookInput').value.trim();
+  if (!val) return;
+  webhookUrl = val;
   agentDot.classList.add('ready');
   agentSub.textContent = 'connected';
   settingsPop.classList.remove('open');
-  addBubble('system', 'Connected to Salyant SDR backend');
+  addBubble('system', 'Connected to workflow webhook');
 });
 
 const sidebar = document.getElementById('sidebar');
@@ -1200,82 +1200,5 @@ document.getElementById('dashMailboxWord').textContent = MAILBOX_WORDS[ACCOUNTS.
 renderDashboard();
 renderAccountsGrid();
 </script>
-
-<script>
-/* ============================================================
-   SALYANT SDR — LIVE MAILBOX BRIDGE
-   Vercel -> n8n -> Zoho
-   ============================================================ */
-
-(async function initLiveMailboxes(){
-
-  if (!window.SalyantLive || !window.SalyantAPI) {
-    console.error('[Salyant] Live API layer missing');
-    return;
-  }
-
-  try {
-
-    const accounts = await window.SalyantLive.loadAccounts();
-
-    console.log('[Salyant] Live accounts:', accounts);
-
-    /*
-     * Store the real accounts globally so the existing dashboard
-     * can use them without changing its visual structure.
-     */
-    window.SALYANT_LIVE_ACCOUNTS = accounts;
-
-    for (const account of accounts) {
-
-      try {
-
-        const messages =
-          await window.SalyantLive.loadMailbox(account.id, 25);
-
-        window.SALYANT_LIVE_MAIL =
-          window.SALYANT_LIVE_MAIL || {};
-
-        window.SALYANT_LIVE_MAIL[account.id] = messages;
-
-        console.log(
-          '[Salyant] Loaded',
-          messages.length,
-          'messages for',
-          account.id
-        );
-
-      } catch (mailError) {
-
-        console.error(
-          '[Salyant] Mailbox failed:',
-          account.id,
-          mailError
-        );
-
-      }
-    }
-
-    window.dispatchEvent(
-      new CustomEvent('salyant-live-mail-ready', {
-        detail: {
-          accounts: window.SALYANT_LIVE_ACCOUNTS,
-          mail: window.SALYANT_LIVE_MAIL
-        }
-      })
-    );
-
-  } catch (error) {
-
-    console.error(
-      '[Salyant] Live mailbox initialization failed:',
-      error
-    );
-
-  }
-
-})();
-</script>
-
 </body>
 </html>

@@ -1,0 +1,24 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/salyant-sdr/chat",
+      "destination": "https://n8n.salyant.com/webhook/salyant-sdr/chat"
+    },
+    {
+      "source": "/api/salyant-sdr/api/accounts",
+      "destination": "https://n8n.salyant.com/webhook/salyant-sdr/api/accounts"
+    },
+    {
+      "source": "/api/salyant-sdr/api/mail",
+      "destination": "https://n8n.salyant.com/webhook/salyant-sdr/api/mail"
+    },
+    {
+      "source": "/api/salyant-sdr/api/send",
+      "destination": "https://n8n.salyant.com/webhook/salyant-sdr/api/send"
+    },
+    {
+      "source": "/api/salyant-sdr/health",
+      "destination": "https://n8n.salyant.com/webhook/salyant-sdr/health"
+    }
+  ]
+}
