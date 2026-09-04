@@ -47,16 +47,21 @@
     };
 
     return rows.map(account => {
+      const addresses = Array.isArray(account.addr)
+        ? account.addr
+        : Array.isArray(account.emailAddress)
+          ? account.emailAddress
+          : [];
+
       const email =
-        account.id ||
-        account.addr ||
         account.email ||
         account.emailAddress ||
+        addresses.find(x => x.isPrimary)?.mailId ||
+        addresses[0]?.mailId ||
         account.address ||
         '';
 
       const id =
-        ACCOUNT_META[email]?.id ||
         EMAIL_TO_ID[email] ||
         account.id ||
         null;
