@@ -1277,5 +1277,83 @@ renderAccountsGrid();
 })();
 </script>
 
+<script>
+/* ================= LIVE UI DATA BRIDGE ================= */
+window.addEventListener('salyant-live-mail-ready', function () {
+  const liveAccounts = window.SALYANT_LIVE_ACCOUNTS || [];
+  const liveMail = window.SALYANT_LIVE_MAIL || {};
+
+  const styles = {
+    'acc-hr': {
+      region:'HR', initials:'HR', accent:'#5B6EF5', accent2:'#3947C4',
+      stage:2, guardrail:96,
+      insight:'Live mailbox connected.'
+    },
+    'acc-main': {
+      region:'UK', initials:'YM', accent:'#2BD9C9', accent2:'#0F8F84',
+      stage:4, guardrail:100,
+      insight:'Live mailbox connected.'
+    },
+    'acc-sales-net': {
+      region:'Sales', initials:'SA', accent:'#9B6BF5', accent2:'#5F3FBF',
+      stage:3, guardrail:92,
+      insight:'Live mailbox connected.'
+    },
+    'acc-sales-way': {
+      region:'Sales', initials:'TW', accent:'#F5A455', accent2:'#C97A2E',
+      stage:1, guardrail:84,
+      insight:'Live mailbox connected.'
+    }
+  };
+
+  const byId = Object.fromEntries(liveAccounts.map(a => [a.id, a]));
+
+  for (let i = 0; i < ACCOUNTS.length; i++) {
+    const acc = ACCOUNTS[i];
+    const live = byId[acc.id];
+    if (!live) continue;
+
+    const style = styles[acc.id] || {};
+    Object.assign(acc, style, {
+      name: live.name || acc.name,
+      addr: live.addr || live.address || acc.addr
+    });
+
+    acc.messages = (liveMail[acc.id] || []).map((m, i) => ({
+      from: m.from || '',
+      subj: m.subject || '',
+      snip: m.summary || '',
+      body: m.summary || '',
+      unread:
+        m.raw?.status === '0' ||
+        m.raw?.status === 0,
+      time: new Date(Number(m.receivedAt || m.sentDateInGMT || Date.now())),
+      messageId: m.messageId || null,
+      raw: m.raw || m
+    }));
+  }
+
+  document.getElementById('topbarMailboxCount').textContent =
+    liveAccounts.length + ' mailboxes';
+
+  const wordMap = {
+    1:'one', 2:'two', 3:'three', 4:'four',
+    5:'five', 6:'six'
+  };
+
+  document.getElementById('dashMailboxWord').textContent =
+    wordMap[liveAccounts.length] || String(liveAccounts.length);
+
+  renderDashboard();
+  renderAccountsGrid();
+
+  console.log(
+    '[Salyant] UI switched to live Zoho data:',
+    liveAccounts.length,
+    'accounts'
+  );
+});
+</script>
+
 </body>
 </html>
