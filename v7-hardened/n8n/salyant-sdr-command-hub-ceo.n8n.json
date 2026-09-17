@@ -1,0 +1,2402 @@
+{
+  "name": "Salyant SDR Command — Backend (4 Zoho + AI Router + Control Plane)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "salyant-sdr/chat",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "2d16ee74-af74-4965-94fb-0bc4b341fbb8",
+      "name": "CHAT — /salyant-sdr/chat",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1800,
+        -600
+      ],
+      "webhookId": "95ac067c-a38a-42ae-a70d-61dcf6db4a43"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const b = $json.body ?? $json;\nreturn [{\n  json: {\n    chatInput: String(b.chatInput ?? b.message ?? '').trim(),\n    sessionId: String(b.sessionId ?? 'director-session'),\n    account: b.account ?? null,\n    source: 'salyant-sdr-command'\n  }\n}];"
+      },
+      "id": "640ee44f-9b93-4a61-b3d1-6d013cf6edf5",
+      "name": "Normalize Chat Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1500,
+        -600
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "KyVpWgFhSgrOUAEV"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "chatInput": "={{ $json.chatInput }}",
+            "sessionId": "={{ $json.sessionId }}",
+            "account": "={{ $json.account }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        }
+      },
+      "id": "962f9941-a8aa-47a2-b084-4c540edb858d",
+      "name": "CALL — AI Router Sub-workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.1,
+      "position": [
+        -1050,
+        -600
+      ],
+      "notes": "Uses the existing Salyant AI Router workflow."
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const j = $json;\nconst output = j.output ?? j.text ?? j.reply ?? j.message ?? (typeof j === 'string' ? j : JSON.stringify(j));\nreturn [{ json: { output, account: j.account ?? null, sessionId: j.sessionId ?? null } }];"
+      },
+      "id": "c2477fee-354b-4d52-9258-a45a8cb0e959",
+      "name": "Format AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -500,
+        -600
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "28ca6811-6e35-4d02-9cfd-e35e3361a8c8",
+      "name": "RESPOND — Chat",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1200,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "salyant-sdr/api/accounts",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "1288b386-ed2d-4628-af73-4ae0ff52d344",
+      "name": "API — /salyant-sdr/api/accounts",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1800,
+        -100
+      ],
+      "webhookId": "4024e42f-1662-4bd6-b6e9-6c7e07c4580e"
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "f466c4f5-407e-4139-926a-0982debe1de1",
+      "name": "ZOHO — HR Account",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -1150,
+        -100
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_HR",
+          "name": "Zoho OAuth - HR (hr@salyant.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "839ddbad-aeb0-4979-8e87-99e1fe6c9799",
+      "name": "ZOHO — Main Account",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        -100
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_MAIN",
+          "name": "Zoho OAuth - Main (yash@salyant.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "4f572529-d971-4e4e-ad23-04f2c90ceaad",
+      "name": "ZOHO — Sales Net Account",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -290,
+        -100
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_SALES_NET",
+          "name": "Zoho OAuth - Sales Net (automate@salyant.net)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "76847732-aca2-460d-b1db-5431766364e4",
+      "name": "ZOHO — Sales Way Account",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        140,
+        -100
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_SALES_WAY",
+          "name": "Zoho OAuth - Sales Way (ai@thesalyantway.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\nconst cfg = {\n  'hr@salyant.co.uk': {id:'acc-hr',name:'HR',region:'HR'},\n  'yash@salyant.co.uk': {id:'acc-main',name:'Main',region:'UK'},\n  'automate@salyant.net': {id:'acc-sales-net',name:'Sales',region:'Sales'},\n  'ai@thesalyantway.co.uk': {id:'acc-sales-way',name:'Sales',region:'Sales'}\n};\nconst rows = [];\nfor (const item of $input.all()) {\n  const raw = item.json ?? {};\n  const data = Array.isArray(raw.data) ? raw.data : (raw.data ? [raw.data] : []);\n  for (const a of data) {\n    const email = a.emailAddress ?? a.email ?? a.mailId ?? a.loginName ?? null;\n    const c = cfg[email] || {};\n    rows.push({\n      id: c.id || null,\n      name: c.name || a.displayName || a.name || null,\n      addr: email,\n      region: c.region || null,\n      accountId: a.accountId ?? a.accountid ?? a.id ?? null,\n      status: a.status ?? 'connected',\n      raw: a\n    });\n  }\n}\nreturn [{json:{accounts:rows, count:rows.length, source:'zoho-mail'}}];\n"
+      },
+      "id": "2582acae-ab45-4622-a3c2-754c9943322e",
+      "name": "Aggregate 4 Zoho Accounts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "1a6e67d5-adf2-4662-8552-4ee1c0fe0582",
+      "name": "RESPOND — Accounts",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1200,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "salyant-sdr/api/mail",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "03acd689-3f5e-44f2-b030-962b5ea5f2f2",
+      "name": "API — /salyant-sdr/api/mail",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1800,
+        400
+      ],
+      "webhookId": "2b2ad3f1-5a5a-46c2-aca2-73cc19e4b668"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.query?.account || $json.body?.account }}",
+                    "rightValue": "acc-hr",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "HR"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.query?.account || $json.body?.account }}",
+                    "rightValue": "acc-main",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Main"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.query?.account || $json.body?.account }}",
+                    "rightValue": "acc-sales-net",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Sales Net"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.query?.account || $json.body?.account }}",
+                    "rightValue": "acc-sales-way",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Sales Way"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "da71ae7c-9674-4a47-baf2-dd6ba5ff9952",
+      "name": "Route — Mailbox",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1450,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "0fe32d89-db15-4d21-bb2d-f54343fe0703",
+      "name": "ZOHO — HR Resolve Account ID",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -1100,
+        200
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_HR",
+          "name": "Zoho OAuth - HR (hr@salyant.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const source = $('API — /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"hr@salyant.co.uk\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for hr@salyant.co.uk.');\nreturn [{json:{accountId, account:'acc-hr', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
+      },
+      "id": "49981678-25d6-4a74-ad79-dff7970ee6dc",
+      "name": "Extract — HR Account ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -780,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getMany",
+        "accountId": "={ $json.accountId }",
+        "folderId": "={{ $json.folderId || $env.ZOHO_INBOX_FOLDER_ID || '' }}"
+      },
+      "id": "6cb7f38e-5465-4e33-b5a2-da878e811b40",
+      "name": "ZOHO — HR Get Mail",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -450,
+        200
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_HR",
+          "name": "Zoho OAuth - HR (hr@salyant.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "039c24b5-5989-4690-8e62-7e1fa946f197",
+      "name": "ZOHO — Main Resolve Account ID",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -1100,
+        480
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_MAIN",
+          "name": "Zoho OAuth - Main (yash@salyant.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const source = $('API — /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"yash@salyant.co.uk\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for yash@salyant.co.uk.');\nreturn [{json:{accountId, account:'acc-main', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
+      },
+      "id": "00710476-bcae-4a95-a371-e42239dc81f1",
+      "name": "Extract — Main Account ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -780,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getMany",
+        "accountId": "={ $json.accountId }",
+        "folderId": "={{ $json.folderId || $env.ZOHO_INBOX_FOLDER_ID || '' }}"
+      },
+      "id": "dafcab0c-e0da-4645-8b8e-fc46e52e21b2",
+      "name": "ZOHO — Main Get Mail",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -450,
+        480
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_MAIN",
+          "name": "Zoho OAuth - Main (yash@salyant.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "f4df0573-1942-45b9-8b5c-4d493390d218",
+      "name": "ZOHO — Sales Net Resolve Account ID",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -1100,
+        760
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_SALES_NET",
+          "name": "Zoho OAuth - Sales Net (automate@salyant.net)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const source = $('API — /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"automate@salyant.net\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for automate@salyant.net.');\nreturn [{json:{accountId, account:'acc-sales-net', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
+      },
+      "id": "fcaf6203-a39c-427a-b933-30d5f267d535",
+      "name": "Extract — Sales Net Account ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -780,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getMany",
+        "accountId": "={ $json.accountId }",
+        "folderId": "={{ $json.folderId || $env.ZOHO_INBOX_FOLDER_ID || '' }}"
+      },
+      "id": "94f030e7-c7bc-4757-a6d5-a00c21bb5c94",
+      "name": "ZOHO — Sales Net Get Mail",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -450,
+        760
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_SALES_NET",
+          "name": "Zoho OAuth - Sales Net (automate@salyant.net)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "e2e958e4-1f8e-4e9f-8649-22297cc660e3",
+      "name": "ZOHO — Sales Way Resolve Account ID",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -1100,
+        1040
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_SALES_WAY",
+          "name": "Zoho OAuth - Sales Way (ai@thesalyantway.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const source = $('API — /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"ai@thesalyantway.co.uk\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for ai@thesalyantway.co.uk.');\nreturn [{json:{accountId, account:'acc-sales-way', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
+      },
+      "id": "746e49b7-2eab-45a2-9f65-b43dcbdecd49",
+      "name": "Extract — Sales Way Account ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -780,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "getMany",
+        "accountId": "={ $json.accountId }",
+        "folderId": "={{ $json.folderId || $env.ZOHO_INBOX_FOLDER_ID || '' }}"
+      },
+      "id": "10a80c9c-68a4-418e-96d9-d71f5a4c46ca",
+      "name": "ZOHO — Sales Way Get Mail",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -450,
+        1040
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_SALES_WAY",
+          "name": "Zoho OAuth - Sales Way (ai@thesalyantway.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const out=[];\nfor (const item of $input.all()) {\n  const j=item.json??{};\n  const data=Array.isArray(j.data)?j.data:(j.data?[j.data]:[]);\n  for (const m of data) {\n    out.push({\n      messageId:m.messageId ?? m.messageID ?? m.id ?? null,\n      threadId:m.threadId ?? null,\n      folderId:m.folderId ?? null,\n      subject:m.subject ?? '',\n      from:m.fromAddress ?? m.sender ?? '',\n      to:m.toAddress ?? '',\n      receivedAt:m.receivedTime ?? m.sentDateInGMT ?? null,\n      summary:m.summary ?? '',\n      hasAttachment:m.hasAttachment === true || m.hasAttachment === '1' || m.hasAttachment === 1,\n      raw:m\n    });\n  }\n}\nout.sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));\nconst limit=Number($node['API — /salyant-sdr/api/mail'].json.query?.limit || 25);\nreturn [{json:{messages:out.slice(0,Math.max(1,Math.min(limit,100))),count:out.length}}];"
+      },
+      "id": "2d5faaa5-5245-4eb2-85b9-6432ce311502",
+      "name": "Normalize Mail Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        100,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "5787f3ba-968d-42d1-a1d6-1d91c24f5174",
+      "name": "RESPOND — Mail",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1200,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "salyant-sdr/api/send",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "bbfe0631-f78e-40e6-83bc-f9331176e27b",
+      "name": "API — /salyant-sdr/api/send",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1800,
+        900
+      ],
+      "webhookId": "242ec75c-c0ca-4c0a-baff-0f3de991f7dd"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\nconst b=$json.body??$json;\nconst account=b.account;\nconst map={\n 'acc-hr': {from:'hr@salyant.co.uk'},\n 'acc-main': {from:'yash@salyant.co.uk'},\n 'acc-sales-net': {from:'automate@salyant.net'},\n 'acc-sales-way': {from:'ai@thesalyantway.co.uk'}\n};\nreturn [{json:{\n account,\n fromAddress: b.fromAddress || map[account]?.from || '',\n toAddress: String(b.toAddress||''),\n subject:String(b.subject||''),\n content:String(b.content||''),\n mailFormat:b.mailFormat||'html',\n askReceipt:!!b.askReceipt\n}}];\n"
+      },
+      "id": "7b3e5506-1481-4b90-9d1a-fde37a4a3dd1",
+      "name": "Normalize Send Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1500,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.account}}",
+                    "rightValue": "acc-hr",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "HR"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.account}}",
+                    "rightValue": "acc-main",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Main"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.account}}",
+                    "rightValue": "acc-sales-net",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Sales Net"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{$json.account}}",
+                    "rightValue": "acc-sales-way",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "Sales Way"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "eaf0f359-0aa1-4911-b07b-60888a8899e4",
+      "name": "Route — Send Mail",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -1200,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "accountId": "={{$json.accountId}}",
+        "fromAddress": "={{$json.fromAddress}}",
+        "toAddress": "={{$json.toAddress}}",
+        "subject": "={{$json.subject}}",
+        "content": "={{$json.content}}",
+        "mailFormat": "={{$json.mailFormat}}",
+        "askReceipt": "={{$json.askReceipt}}"
+      },
+      "id": "773c1ed6-69d0-4680-83ac-c472ea5e4133",
+      "name": "ZOHO — HR Send",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        700
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_HR",
+          "name": "Zoho OAuth - HR (hr@salyant.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "accountId": "={{$json.accountId}}",
+        "fromAddress": "={{$json.fromAddress}}",
+        "toAddress": "={{$json.toAddress}}",
+        "subject": "={{$json.subject}}",
+        "content": "={{$json.content}}",
+        "mailFormat": "={{$json.mailFormat}}",
+        "askReceipt": "={{$json.askReceipt}}"
+      },
+      "id": "6f7fffdc-7b09-4ae9-9cbe-edada235c1c1",
+      "name": "ZOHO — Main Send",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        850
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_MAIN",
+          "name": "Zoho OAuth - Main (yash@salyant.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "accountId": "={{$json.accountId}}",
+        "fromAddress": "={{$json.fromAddress}}",
+        "toAddress": "={{$json.toAddress}}",
+        "subject": "={{$json.subject}}",
+        "content": "={{$json.content}}",
+        "mailFormat": "={{$json.mailFormat}}",
+        "askReceipt": "={{$json.askReceipt}}"
+      },
+      "id": "3ce2fe46-c74a-4d17-b300-114a606ca3d1",
+      "name": "ZOHO — Sales Net Send",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        1000
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_SALES_NET",
+          "name": "Zoho OAuth - Sales Net (automate@salyant.net)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "accountId": "={{$json.accountId}}",
+        "fromAddress": "={{$json.fromAddress}}",
+        "toAddress": "={{$json.toAddress}}",
+        "subject": "={{$json.subject}}",
+        "content": "={{$json.content}}",
+        "mailFormat": "={{$json.mailFormat}}",
+        "askReceipt": "={{$json.askReceipt}}"
+      },
+      "id": "aa267eb7-adf9-4e0a-bc54-99769e9d273f",
+      "name": "ZOHO — Sales Way Send",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        1150
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_SALES_WAY",
+          "name": "Zoho OAuth - Sales Way (ai@thesalyantway.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{json:{\n  ok:true,\n  account:$node['Normalize Send Request'].json.account,\n  messageId:$json.data?.messageId ?? $json.messageId ?? null,\n  providerResponse:$json\n}}];"
+      },
+      "id": "da857773-7a20-4847-94ce-cc9ae1daa3ae",
+      "name": "Format Send Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        900
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "270aaab3-9f61-46a2-a653-7034803049da",
+      "name": "RESPOND — Send",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1200,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "salyant-sdr/health",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "e03e8684-b6cd-44da-97fa-2a850462d91c",
+      "name": "HEALTH — /salyant-sdr/health",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1800,
+        1400
+      ],
+      "webhookId": "4a846bfd-248f-4952-94bc-bd88128aec6b"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "return [{json:{\n  ok:true,\n  service:'salyant-sdr-command-backend',\n  version:'1.0.0',\n  zohoAccounts:4,\n  aiRouter:'sub-workflow',\n  timestamp:new Date().toISOString()\n}}];"
+      },
+      "id": "116dca8f-6c0c-42cb-8f11-14a3a10ce830",
+      "name": "Build Health Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1100,
+        1400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "82e1dcc4-b29d-4d79-a08b-9e7544fb38e3",
+      "name": "RESPOND — Health",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1200,
+        2000
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "resolve-send-acc-hr",
+      "name": "ZOHO — HR Resolve Send Account",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        700
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_HR",
+          "name": "Zoho OAuth - HR (hr@salyant.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const req=$('Normalize Send Request').first().json;\nconst r=$json;\nconst id=r.data?.[0]?.accountId ?? r.data?.accounts?.[0]?.accountId ?? r.accountId ?? r.accounts?.[0]?.accountId ?? null;\nif(!id) throw new Error('Zoho did not return an accountId for hr@salyant.co.uk.');\nreturn [{json:{...req, accountId:id}}];"
+      },
+      "id": "extract-send-acc-hr",
+      "name": "Extract — HR Send Account ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -840,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "resolve-send-acc-main",
+      "name": "ZOHO — Main Resolve Send Account",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        850
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_MAIN",
+          "name": "Zoho OAuth - Main (yash@salyant.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const req=$('Normalize Send Request').first().json;\nconst r=$json;\nconst id=r.data?.[0]?.accountId ?? r.data?.accounts?.[0]?.accountId ?? r.accountId ?? r.accounts?.[0]?.accountId ?? null;\nif(!id) throw new Error('Zoho did not return an accountId for yash@salyant.co.uk.');\nreturn [{json:{...req, accountId:id}}];"
+      },
+      "id": "extract-send-acc-main",
+      "name": "Extract — Main Send Account ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -840,
+        850
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "resolve-send-acc-sales-net",
+      "name": "ZOHO — Sales Net Resolve Send Account",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        1000
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_SALES_NET",
+          "name": "Zoho OAuth - Sales Net (automate@salyant.net)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const req=$('Normalize Send Request').first().json;\nconst r=$json;\nconst id=r.data?.[0]?.accountId ?? r.data?.accounts?.[0]?.accountId ?? r.accountId ?? r.accounts?.[0]?.accountId ?? null;\nif(!id) throw new Error('Zoho did not return an accountId for automate@salyant.net.');\nreturn [{json:{...req, accountId:id}}];"
+      },
+      "id": "extract-send-acc-sales-net",
+      "name": "Extract — Sales Net Send Account ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -840,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "account",
+        "operation": "get"
+      },
+      "id": "resolve-send-acc-sales-way",
+      "name": "ZOHO — Sales Way Resolve Send Account",
+      "type": "n8n-nodes-zoho-mail.zohoMail",
+      "typeVersion": 1,
+      "position": [
+        -960,
+        1150
+      ],
+      "credentials": {
+        "zohoMailOAuth2Api": {
+          "id": "REPLACE_WITH_CRED_ID_SALES_WAY",
+          "name": "Zoho OAuth - Sales Way (ai@thesalyantway.co.uk)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const req=$('Normalize Send Request').first().json;\nconst r=$json;\nconst id=r.data?.[0]?.accountId ?? r.data?.accounts?.[0]?.accountId ?? r.accountId ?? r.accounts?.[0]?.accountId ?? null;\nif(!id) throw new Error('Zoho did not return an accountId for ai@thesalyantway.co.uk.');\nreturn [{json:{...req, accountId:id}}];"
+      },
+      "id": "extract-send-acc-sales-way",
+      "name": "Extract — Sales Way Send Account ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -840,
+        1150
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "salyant-sdr/api/command",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000001",
+      "name": "COMMAND — /salyant-sdr/api/command",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const b=$json.body??$json;\nconst headers=$json.headers||{};\nconst secret=String(headers['x-salyant-command-secret']??headers['X-Salyant-Command-Secret']??'');\nconst expected=String($env.SALYANT_COMMAND_SHARED_SECRET??'');\nif(!expected || secret!==expected) throw new Error('Unauthorized command request.');\nconst mode=String(b.mode||((b.message||b.chatInput)?'chat':'control'));\nconst message=String(b.message??b.chatInput??'').trim();\nconst sessionId=String(b.sessionId??'director-session');\nconst account=b.account??null;\nconst operation=String(b.operation??'');\nconst args=b.args&&typeof b.args==='object'?b.args:{};\nconst attachments=Array.isArray(b.attachments)?b.attachments.slice(0,8):[];\nconst taskId=String(b.taskId||('task-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8)));\nconst confirmed=Boolean(b.confirmed===true || b.confirmationToken);\nreturn [{json:{mode,message,sessionId,account,operation,args,attachments,taskId,confirmed,step:0,trace:[],transcript:[],source:'salyant-ceo-command-hub'}}];"
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000002",
+      "name": "Normalize Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mode }}",
+                    "rightValue": "control",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Control"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.mode }}",
+                    "rightValue": "chat",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Chat"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000003",
+      "name": "Route Command Mode",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "KyVpWgFhSgrOUAEV"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "model": "gpt-5-nano",
+            "system": "={{ $json.system }}",
+            "prompt": "={{ $json.prompt }}",
+            "temperature": 0,
+            "sessionId": "={{ $json.sessionId }}",
+            "account": "={{ $json.account }}",
+            "attachments": "={{ $json.attachments }}",
+            "chatInput": "={{ $json.system + '\\n\\nUSER/TASK:\\n' + $json.prompt }}"
+          },
+          "options": {}
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000004",
+      "name": "AI Router — Operations Director",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        720,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "function content(d){let x=d.response??d.message?.content??d.choices?.[0]?.message?.content??d.candidates?.[0]?.content?.parts?.[0]?.text??d.text??''; if(typeof x!=='string') x=JSON.stringify(x); return x.replace(/```json/gi,'').replace(/```/g,'').replace(/<think>[\\s\\S]*?<\\/think>/gi,'').trim();}\nconst items=$input.all(); let best=null; for(const item of items){const raw=content(item.json||{}); try{const p=JSON.parse(raw); if(p&&typeof p==='object') best=p;}catch{}}\nconst state=$('Build Router Input').last().json||{}; const step=Number(state.step||0)+1;\nif(!best) return [{json:{...state,step,agent:{kind:'final',message:'The AI Router returned an invalid command payload.'}}}];\nif(step>8 && best.kind==='tool_call') best={kind:'final',message:'I stopped after 8 control steps to prevent an unbounded automation loop.'};\nreturn [{json:{...state,step,agent:best}}];"
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000005",
+      "name": "Parse AI Command",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.agent.kind }}",
+                    "rightValue": "tool_call",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Tool"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.agent.kind }}",
+                    "rightValue": "confirmation_required",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Confirmation"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.agent.kind }}",
+                    "rightValue": "final",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Final"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000006",
+      "name": "Route AI Decision",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$json,operation:String($json.operation||$json.agent?.tool?.name||''),args:$json.args&&Object.keys($json.args).length?$json.args:($json.agent?.tool?.args||{})}}];"
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000007",
+      "name": "Prepare Tool Call",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$json; const op=String(input.operation||''); const a=input.args||{};\nconst n8n=String($env.N8N_API_BASE_URL||'https://n8n.salyant.co.uk/api/v1').replace(/\\/$/,'');\nconst key=String($env.N8N_API_KEY||''); const mailBase=String($env.SALYANT_N8N_BASE_URL||'https://n8n.salyant.co.uk').replace(/\\/$/,'');\nconst supa=String($env.SUPABASE_URL||'').replace(/\\/$/,''); const skey=String($env.SUPABASE_SERVICE_ROLE_KEY||'');\nconst lang=String($env.LANGSEARCH_API_KEY||''); const reacher=String($env.REACHER_API_KEY||''); const jiraBase=String($env.JIRA_BASE_URL||'').replace(/\\/$/,''); const jiraEmail=String($env.JIRA_EMAIL||''); const jiraToken=String($env.JIRA_API_TOKEN||''); const jiraCloudId=String($env.JIRA_CLOUD_ID||'');\nconst now=new Date().toISOString();\nasync function req(method,url,body,headers={}){const h={Accept:'application/json',...headers};if(body!==undefined)h['Content-Type']='application/json';const r=await $helpers.httpRequest({url,method,headers:h,body:body!==undefined?body:undefined,json:body!==undefined,returnFullResponse:true,timeout:30000});return r?.body??r;}\nasync function nget(path){return req('GET',n8n+path,undefined,key?{'X-N8N-API-KEY':key}:{});} async function npost(path,b){return req('POST',n8n+path,b,key?{'X-N8N-API-KEY':key}:{});} async function npatch(path,b){return req('PATCH',n8n+path,b,key?{'X-N8N-API-KEY':key}:{});} async function ndel(path){return req('DELETE',n8n+path,undefined,key?{'X-N8N-API-KEY':key}:{});} \nasync function web(method,path,b){return req(method,mailBase+path,b);}\nasync function db(table,method='GET',query='',body){if(!supa||!skey)throw new Error('Supabase persistence is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');const headers={'apikey':skey,'Authorization':'Bearer '+skey,'Prefer':(method==='POST'&&query.includes('on_conflict')?'resolution=merge-duplicates,return=representation':'return=representation')};return req(method,supa+'/rest/v1/'+table+(query?('?'+query):''),body,headers);}\nasync function auditSafe(action,tool,reason,inputData,resultData,approvalId=null){try{if(supa&&skey)await db('salyant_audit','POST','',[{task_id:String(input.taskId||''),session_id:String(input.sessionId||''),actor:'ai',action:String(action),tool:String(tool),reason:String(reason||''),input:inputData||{},result:resultData||{},approval_id:approvalId}]);}catch{}}\nasync function backupWorkflow(workflowId,reason){try{if(!supa||!skey)return null;const w=await nget('/workflows/'+encodeURIComponent(workflowId));const row=[{workflow_id:String(workflowId),name:String(w?.name||''),version_id:w?.versionId||w?.versionCounter||null,workflow:w,reason:String(reason||''),task_id:String(input.taskId||'')}];return await db('salyant_workflow_backups','POST','',row);}catch{return null;}}\n\nasync function mcp(toolName,args){const mcpUrl=String($env.N8N_MCP_URL||'');if(!mcpUrl)throw new Error('N8N_MCP_URL is not configured.');const headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream'};const bearer=String($env.N8N_MCP_BEARER_TOKEN||'');if(bearer)headers.Authorization='Bearer '+bearer;const parse=(raw)=>{const s=String(raw||'');for(const line of s.split(/\\r?\\n/).reverse()){if(line.startsWith('data:')){try{return JSON.parse(line.slice(5).trim())}catch{}}}try{return JSON.parse(s)}catch{return null}};const initResp=await $helpers.httpRequest({method:'POST',url:mcpUrl,headers,body:{jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2024-11-05',capabilities:{},clientInfo:{name:'salyant-ceo-hub',version:'3.1'}}},returnFullResponse:true,json:true,timeout:15000});const initBody=initResp?.body||initResp;const sid=initResp?.headers?.['mcp-session-id']||initResp?.headers?.['Mcp-Session-Id']||initResp?.headers?.['MCP-Session-Id'];if(sid)headers['mcp-session-id']=sid;await $helpers.httpRequest({method:'POST',url:mcpUrl,headers,body:{jsonrpc:'2.0',method:'notifications/initialized'},returnFullResponse:true,json:true,timeout:10000});const resp=await $helpers.httpRequest({method:'POST',url:mcpUrl,headers,body:{jsonrpc:'2.0',id:2,method:'tools/call',params:{name:toolName,arguments:args||{}}},returnFullResponse:true,json:false,timeout:30000});const parsed=parse(resp?.body||resp);if(parsed?.error)throw new Error(JSON.stringify(parsed.error));return parsed?.result||parsed;}\nconst destructive=['activate_workflow','publish_workflow','delete_workflow','unpublish_workflow'];\nconst bulkMail=op==='mail_send' && (a.bulk===true || (Array.isArray(a.to)&&a.to.length>5) || (Array.isArray(a.payload?.to)&&a.payload.to.length>5));\nconst credentialMutation=['integration_remove'];\nconst directFrontendMutation=op==='github_update_file' && String(a.branch||$env.GITHUB_BRANCH||'main')===String($env.GITHUB_BRANCH||'main');\nif((directFrontendMutation||op==='vercel_deploy')&&!input.confirmed){return [{json:{...input,agent:{kind:'confirmation_required',message:`Confirmation required before production frontend change: ${op}.`,action:op,args:a},toolResult:{ok:false,confirmationRequired:true},trace:[...(input.trace||[]),{type:'policy',status:'warn',text:'Production frontend change requires confirmation'}]}}];}\nif((destructive.includes(op)||bulkMail||credentialMutation.includes(op)||op==='mcp_call') && !input.confirmed){return [{json:{...input,agent:{kind:'confirmation_required',message:`Confirmation required before ${op}. No action was executed.`,action:op,args:a},toolResult:{ok:false,confirmationRequired:true},trace:[...(input.trace||[]),{type:'policy',status:'warn',text:'Confirmation required for '+op}]}}];}\nasync function github(method,path,body){const token=String($env.GITHUB_TOKEN||'');if(!token)throw new Error('GITHUB_TOKEN is not configured.');const r=await req(method,'https://api.github.com'+path,body,{Authorization:'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28','User-Agent':'Salyant-Command-Hub'});return r;}\nasync function vercelHook(){const u=String($env.VERCEL_DEPLOY_HOOK_URL||'');if(!u)throw new Error('VERCEL_DEPLOY_HOOK_URL is not configured.');return await req('POST',u,undefined,{});}\nasync function jira(path,method='GET',body){if(!jiraBase||!jiraEmail||!jiraToken)throw new Error('Jira/JSM is not configured. Set JIRA_BASE_URL, JIRA_EMAIL and JIRA_API_TOKEN.');const auth=Buffer.from(jiraEmail+':'+jiraToken).toString('base64');return await req(method,jiraBase+path,body,{Authorization:'Basic '+auth});}\ntry{\n let result;\n if(!key && !['mail_accounts','mail_list','mail_send','web_search','email_verify','memory_search','memory_store','memory_delete','task_create','task_update','task_get','task_list','approval_create','approval_list','approval_resolve','audit_log','usage_log','integrations_list','integration_upsert','integration_remove','crm_search','crm_upsert','event_emit','system_status','ceo_profile_get','ceo_profile_upsert','ceo_suggestions','ceo_suggestion_create','ceo_autopilot'].includes(op)) throw new Error('N8N_API_KEY is not configured.');\n switch(op){\n  case 'list_workflows':{const q=new URLSearchParams();q.set('limit',String(Math.min(Number(a.limit||100),250)));if(a.name)q.set('name',String(a.name));if(a.active!==undefined)q.set('active',String(a.active));result=await nget('/workflows?'+q);break;}\n  case 'get_workflow':result=await nget('/workflows/'+encodeURIComponent(a.workflowId));break;\n  case 'search_executions':{const q=new URLSearchParams();q.set('limit',String(Math.min(Number(a.limit||20),100)));if(a.workflowId)q.set('workflowId',String(a.workflowId));if(a.status)q.set('status',String(a.status));if(a.includeData!==undefined)q.set('includeData',String(!!a.includeData));result=await nget('/executions?'+q);break;}\n  case 'get_execution':result=await nget('/executions/'+encodeURIComponent(a.executionId)+(a.includeData===false?'?includeData=false':'?includeData=true'));break;\n  case 'create_workflow':{const body={name:String(a.name||''),nodes:a.nodes,connections:a.connections||{},settings:a.settings||{executionOrder:'v1'},staticData:a.staticData,tags:a.tags,projectId:a.projectId};Object.keys(body).forEach(k=>body[k]===undefined&&delete body[k]);result=await npost('/workflows',body);break;}\n  case 'update_workflow':{await backupWorkflow(String(a.workflowId),'before update_workflow');const body={};for(const k of ['name','nodes','connections','settings','staticData','tags','projectId'])if(a[k]!==undefined)body[k]=a[k];result=await npatch('/workflows/'+encodeURIComponent(a.workflowId),body);break;}\n  case 'validate_workflow':{const w={name:String(a.name||'Validation Target'),nodes:Array.isArray(a.nodes)?a.nodes:[],connections:a.connections||{},settings:a.settings||{}};const errors=[];const ids=new Set();if(!w.name)errors.push('Workflow name is empty');if(!w.nodes.length)errors.push('Workflow must contain at least one node');for(const node of w.nodes){if(!node.id)errors.push('Node missing id: '+String(node.name||node.type||'unknown'));if(ids.has(node.id))errors.push('Duplicate node id: '+node.id);ids.add(node.id);if(!node.name)errors.push('Node missing name');if(!node.type)errors.push('Node '+String(node.name||node.id)+' missing type');if(!node.parameters||typeof node.parameters!=='object')errors.push('Node '+String(node.name||node.id)+' missing parameters object');}result={valid:!errors.length,nodeCount:w.nodes.length,errors,warnings:[]};break;}\n  case 'run_workflow':{let wf=a.workflowData;if(!wf)wf=await nget('/workflows/'+encodeURIComponent(a.workflowId));const body={workflowData:wf};if(a.startNodes)body.startNodes=a.startNodes;if(a.destinationNode)body.destinationNode=a.destinationNode;if(a.runData)body.runData=a.runData;result=await npost('/workflows/'+encodeURIComponent(a.workflowId)+'/run',body);break;}\n  case 'activate_workflow':{await backupWorkflow(String(a.workflowId),'before activate_workflow');result=await npost('/workflows/'+encodeURIComponent(a.workflowId)+'/activate',a.versionId?{versionId:a.versionId}:undefined);break;}\n  case 'deactivate_workflow':result=await npost('/workflows/'+encodeURIComponent(a.workflowId)+'/deactivate');break;\n  case 'publish_workflow':{await backupWorkflow(String(a.workflowId),'before publish_workflow');result=await npost('/workflows/'+encodeURIComponent(a.workflowId)+'/publish',a.versionId?{versionId:a.versionId}:undefined);break;}\n  case 'unpublish_workflow':result=await npost('/workflows/'+encodeURIComponent(a.workflowId)+'/unpublish');break;\n  case 'delete_workflow':result=await ndel('/workflows/'+encodeURIComponent(a.workflowId));break;\n  case 'list_credentials':result=await nget('/credentials');break; case 'list_projects':result=await nget('/projects');break; case 'list_tags':result=await nget('/tags');break;\n  case 'n8n_health':{await nget('/workflows?limit=1');result={ok:true,reachable:true};break;}\n  case 'mail_accounts':result=await web('GET','/webhook/salyant-sdr/api/accounts');break;\n  case 'mail_list':{const q=new URLSearchParams({account:String(a.account||'acc-main'),limit:String(Math.min(Number(a.limit||25),100))});if(a.folderId)q.set('folderId',String(a.folderId));if(a.query)q.set('query',String(a.query));result=await web('GET','/webhook/salyant-sdr/api/mail?'+q);break;}\n  case 'mail_send':result=await web('POST','/webhook/salyant-sdr/api/send',a.payload||a);break;\n  case 'web_search':{if(!lang)throw new Error('LANGSEARCH_API_KEY is not configured.');result=await req('POST','https://api.langsearch.com/v1/web-search',{query:String(a.query||''),freshness:String(a.freshness||'noLimit'),summary:a.summary!==false,count:Math.min(Number(a.count||10),10)},{Authorization:'Bearer '+lang});break;}\n  case 'web_rerank':{if(!lang)throw new Error('LANGSEARCH_API_KEY is not configured.');result=await req('POST','https://api.langsearch.com/v1/rerank',{model:'langsearch-reranker-v1',query:String(a.query||''),top_n:Math.min(Number(a.top_n||5),50),return_documents:true,documents:Array.isArray(a.documents)?a.documents.slice(0,50):[]},{Authorization:'Bearer '+lang});break;}\n  case 'email_verify':{const email=String(a.email||a.to_email||'');if(!email)throw new Error('email is required');if(reacher)result=await req('POST','https://api.reacher.email/v0/check_email',{to_email:email},{authorization:reacher});else if($env.REACHER_BASE_URL)result=await req('POST',String($env.REACHER_BASE_URL).replace(/\\/$/,'')+'/v0/check_email',{to_email:email});else throw new Error('Configure REACHER_API_KEY or REACHER_BASE_URL.');break;}\n  case 'memory_search':{if(!supa)throw new Error('Supabase persistence is not configured.');const q=encodeURIComponent('%'+String(a.query||'')+'%');result=await db('salyant_memory','GET','select=*&or=(content.ilike.'+q+',title.ilike.'+q+')&order=updated_at.desc&limit=20');break;}\n  case 'memory_store':{result=await db('salyant_memory','POST','', [{scope:String(a.scope||'global'),kind:String(a.kind||'note'),title:String(a.title||'Operational memory'),content:String(a.text||a.content||''),session_id:String(input.sessionId||''),task_id:String(input.taskId||''),metadata:a.metadata||{}}]);break;}\n  case 'memory_delete':result=await db('salyant_memory','DELETE','id=eq.'+encodeURIComponent(String(a.id)));break;\n  case 'task_create':result=await db('salyant_tasks','POST','',[{id:String(input.taskId),title:String(a.title||input.message.slice(0,120)),status:'queued',priority:String(a.priority||'normal'),owner:'ai',session_id:String(input.sessionId),plan:a.plan||{},metadata:a.metadata||{}}]);break;\n  case 'task_update':result=await db('salyant_tasks','PATCH','id=eq.'+encodeURIComponent(String(a.taskId||input.taskId)),{status:a.status,progress:a.progress,checkpoint:a.checkpoint,plan:a.plan,metadata:a.metadata,completed_at:a.status==='completed'?now:undefined,last_error:a.last_error});break;\n  case 'task_get':result=await db('salyant_tasks','GET','id=eq.'+encodeURIComponent(String(a.taskId||input.taskId)));break;\n  case 'task_list':result=await db('salyant_tasks','GET','order=updated_at.desc&limit='+Math.min(Number(a.limit||30),100));break;\n  case 'approval_create':result=await db('salyant_approvals','POST','',[{task_id:String(a.taskId||input.taskId),action:String(a.action||''),reason:String(a.reason||''),payload:a.payload||{},status:'pending'}]);break;\n  case 'approval_list':result=await db('salyant_approvals','GET','status=eq.pending&order=created_at.desc&limit=50');break;\n  case 'approval_resolve':result=await db('salyant_approvals','PATCH','id=eq.'+encodeURIComponent(String(a.id)),{status:String(a.status||'approved'),resolved_at:now,resolution_note:String(a.note||'')});break;\n  case 'audit_log':result=await db('salyant_audit','POST','',[{task_id:String(input.taskId||''),session_id:String(input.sessionId||''),actor:'ai',action:String(a.action||op),tool:String(a.tool||op),reason:String(a.reason||input.message||''),input:a.input||{},result:a.result||{},approval_id:a.approvalId||null}]);break;\n  case 'usage_log':result=await db('salyant_usage','POST','',[{task_id:String(input.taskId||''),provider:String(a.provider||'unknown'),metric:String(a.metric||'calls'),quantity:Number(a.quantity||1),estimated_cost:Number(a.estimated_cost||0),metadata:a.metadata||{}}]);break;\n  case 'integrations_list':result={integrations:await db('salyant_integrations','GET','order=name.asc'),configuredEnv:{langsearch:!!lang,reacher:!!reacher,supabase:!!supa,n8n:!!key,mcp:!!$env.N8N_MCP_URL}};break;\n  case 'integration_upsert':{const row={id:String(a.id),name:String(a.name||a.id),provider:String(a.provider||'custom'),credential_ref:a.credentialRef||null,secret_ref_env:a.secretRefEnv||null,enabled:a.enabled!==false,metadata:a.metadata||{}};result=await db('salyant_integrations','POST','on_conflict=id', [row]);break;}\n  case 'integration_remove':result=await db('salyant_integrations','DELETE','id=eq.'+encodeURIComponent(String(a.id)));break;\n  case 'crm_search':{const q=encodeURIComponent('%'+String(a.query||'')+'%');result=await db('salyant_contacts','GET','select=*&or=(name.ilike.'+q+',email.ilike.'+q+',company.ilike.'+q+')&limit=50');break;}\n  case 'crm_upsert':result=await db('salyant_contacts','POST','on_conflict=email',[{email:a.email||null,name:a.name||null,company:a.company||null,role:a.role||null,status:a.status||'lead',source:a.source||'ai',metadata:a.metadata||{}}]);break;\n  case 'event_emit':result=await db('salyant_events','POST','',[{event_type:String(a.event_type||a.type||'custom'),payload:a.payload||{},task_id:String(input.taskId||''),source:'ai'}]);break;\n  case 'ceo_profile_get':{result=await db('salyant_ceo_profile','GET','id=eq.default&limit=1');break;}\n  case 'ceo_profile_upsert':{const row={id:'default',goals:String(a.goals||''),auto_allowed:String(a.auto_allowed||''),approval_required:String(a.approval_required||''),limits:String(a.limits||''),updated_at:now};result=await db('salyant_ceo_profile','POST','on_conflict=id',[row]);break;}\n  case 'ceo_suggestions':{result=await db('salyant_ceo_suggestions','GET','status=eq.open&order=priority.desc,created_at.desc&limit=20');break;}\n  case 'ceo_suggestion_create':{result=await db('salyant_ceo_suggestions','POST','',[{title:String(a.title||'CEO suggestion'),description:String(a.description||''),action:a.action||null,priority:Number(a.priority||0),status:'open'}]);break;}\n  case 'ceo_autopilot':{const profile=(await db('salyant_ceo_profile','GET','id=eq.default&limit=1'))?.[0]||{};const prompt=`You are Salyant's CEO Autopilot. Act as an operations partner for a solo CEO. First review relevant memory, current tasks, approvals, system health, workflows/executions, email and research capabilities. Identify only high-value actions that materially save the CEO time or move the business forward. Respect the CEO profile below. Execute permitted actions, create approval requests for gated actions, verify consequential work, and store important outcomes in memory. Do not invent facts. Keep the final brief concise and actionable. CEO goals: ${profile.goals||'Not configured'}\\nAutomatically allowed: ${profile.auto_allowed||'Read, research, inspect, draft, safe workflow operations'}\\nApproval required: ${profile.approval_required||'Production activation, bulk sends, deletion, purchases, credentials'}\\nLimits/notes: ${profile.limits||'Use conservative limits'}`;const headers={'Content-Type':'application/json','Accept':'application/json','X-Salyant-Command-Secret':String($env.SALYANT_COMMAND_SHARED_SECRET||'')};result=await req('POST',mailBase+'/webhook/salyant-sdr/api/command',{mode:'chat',message:prompt,sessionId:'ceo-autopilot-'+new Date().toISOString().slice(0,10),account:null},{...headers});break;}\n  case 'system_status':{const checks={n8n:false,supabase:!!supa,langsearch:!!lang,reacher:!!reacher,mcp:!!$env.N8N_MCP_URL,jira:!!(jiraBase&&jiraEmail&&jiraToken&&jiraCloudId)};try{if(key){await nget('/workflows?limit=1');checks.n8n=true;}}catch{}result={...checks,taskId:input.taskId,time:now};break;}\n  case 'github_get_file':{const owner=String(a.owner||$env.GITHUB_OWNER||'');const repo=String(a.repo||$env.GITHUB_REPO||'');const path=String(a.path||'');const ref=String(a.ref||$env.GITHUB_BRANCH||'main');if(!owner||!repo||!path)throw new Error('owner, repo and path are required');{const r=await github('GET',`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(ref)}`);if(r&&r.content){try{r.decodedContent=Buffer.from(String(r.content).replace(/\\n/g,''),'base64').toString('utf8')}catch{}}result=r;}break;}\ncase 'github_create_branch':{const owner=String(a.owner||$env.GITHUB_OWNER||''),repo=String(a.repo||$env.GITHUB_REPO||''),branch=String(a.branch||'ai-repair-'+Date.now()),from=String(a.from||$env.GITHUB_BRANCH||'main');const base=await github('GET',`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/ref/heads/${encodeURIComponent(from)}`);result=await github('POST',`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/refs`,{ref:'refs/heads/'+branch,sha:base.object.sha});break;}\ncase 'github_update_file':{const owner=String(a.owner||$env.GITHUB_OWNER||''),repo=String(a.repo||$env.GITHUB_REPO||''),path=String(a.path||''),branch=String(a.branch||$env.GITHUB_BRANCH||'main');if(!owner||!repo||!path||a.content===undefined)throw new Error('owner, repo, path and content are required');let current=null;try{current=await github('GET',`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${path.split('/').map(encodeURIComponent).join('/')}?ref=${encodeURIComponent(branch)}`)}catch{}const body={message:String(a.message||'chore: AI repair '+path),content:Buffer.from(String(a.content)).toString('base64'),branch};if(current?.sha)body.sha=current.sha;result=await github('PUT',`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${path.split('/').map(encodeURIComponent).join('/')}`,body);if(a.deploy===true&&$env.VERCEL_DEPLOY_HOOK_URL)result={commit:result,deploy:await vercelHook()};break;}\ncase 'github_create_pr':{const owner=String(a.owner||$env.GITHUB_OWNER||''),repo=String(a.repo||$env.GITHUB_REPO||''),head=String(a.head||''),base=String(a.base||$env.GITHUB_BRANCH||'main');result=await github('POST',`/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls`,{title:String(a.title||'AI repair'),head,base,body:String(a.body||'Automated Salyant repair; review before merge.')});break;}\ncase 'vercel_deploy':result=await vercelHook();break;\ncase 'frontend_report':{result=await db('salyant_frontend_errors','POST','',[{session_id:String(input.sessionId||''),severity:String(a.severity||'error'),message:String(a.message||''),source:String(a.source||''),stack:String(a.stack||''),metadata:a.metadata||{}}]);break;}\ncase 'frontend_recent_errors':{result=await db('salyant_frontend_errors','GET','order=created_at.desc&limit='+Math.min(Number(a.limit||50),100));break;}\ncase 'jsm_alerts':{const q=new URLSearchParams();q.set('size',String(Math.min(Number(a.size||50),200)));if(a.query)q.set('query',String(a.query));if(a.status)q.set('status',String(a.status));result=await jira('/jsm/ops/api/'+encodeURIComponent(jiraCloudId)+'/v1/alerts?'+q,'GET');break;}\ncase 'jsm_create_alert':{const body={message:String(a.message||''),alias:String(a.alias||('salyant-'+Date.now())),entity:String(a.entity||'Salyant Command Hub'),source:String(a.source||'Salyant'),description:String(a.description||''),priority:String(a.priority||'P2'),tags:Array.isArray(a.tags)?a.tags:['salyant','automated'],extraProperties:a.extraProperties||{}};result=await jira('/jsm/ops/api/'+encodeURIComponent(jiraCloudId)+'/v1/alerts','POST',body);break;}\ncase 'jsm_ack_alert':result=await jira('/jsm/ops/api/'+encodeURIComponent(jiraCloudId)+'/v1/alerts/'+encodeURIComponent(String(a.alertId))+'/acknowledge','POST');break;\ncase 'jsm_close_alert':result=await jira('/jsm/ops/api/'+encodeURIComponent(jiraCloudId)+'/v1/alerts/'+encodeURIComponent(String(a.alertId))+'/close','POST');break;\ncase 'jsm_incidents':result=await jira('/jsm/incidents/cloudId/'+encodeURIComponent(jiraCloudId)+'/v1/incident?limit='+Math.min(Number(a.limit||50),100),'GET');break;\ncase 'jsm_get_incident':result=await jira('/jsm/incidents/cloudId/'+encodeURIComponent(jiraCloudId)+'/v1/incident/'+encodeURIComponent(String(a.issueId)),'GET');break;\ncase 'mcp_call':result=await mcp(String(a.toolName||''),a.toolArgs||{});break;\n  default:throw new Error('Unknown control operation: '+op);\n }\n await auditSafe(op,op,input.message,input.args||{},result,input.approvalId||null);return [{json:{...input,toolResult:{ok:true,result},trace:[...(input.trace||[]),{type:'tool',name:op,status:'ok',text:op+' completed'}]}}];\n}catch(error){await auditSafe(op,op,input.message,input.args||{},{error:String(error?.message||error)},input.approvalId||null);return [{json:{...input,toolResult:{ok:false,error:String(error?.message||error)},trace:[...(input.trace||[]),{type:'tool',name:op,status:'warn',text:op+' failed: '+String(error?.message||error)}]}}];}"
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000008",
+      "name": "Execute Control Tool",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j=$json;const ar=j.agent||{};const transcript=[...(j.transcript||[]),{step:j.step,tool:ar.tool||null,result:j.toolResult||null}];const prompt=['Original user request:',j.message,'Task ID:',j.taskId,'Attachments:',JSON.stringify((j.attachments||[]).map(a=>({name:a.name,mime:a.mime,size:a.size}))), '\\nPrevious tool transcript:',JSON.stringify(transcript),'\\nReturn the next JSON action. If complete and verified, write durable memory and audit the outcome, update the task to completed, then return kind=final. If blocked by missing credentials or human approval, return kind=confirmation_required or final with exact next step.'].join('\\n');return [{json:{...j,transcript,prompt}}];"
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000009",
+      "name": "Build Next Agent Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j=$json; const msg=j.agent?.message||'The operation completed.'; return [{json:{output:msg,message:msg,trace:j.trace||[],step:j.step||0}}];"
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000010",
+      "name": "Format Agent Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg=$json.agent?.message||'This action requires your confirmation before I can continue.'; return [{json:{output:msg,message:msg,trace:[...($json.trace||[]),{type:'system',status:'warn',text:'Confirmation required'}],confirmation_required:true}}];"
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000011",
+      "name": "Format Confirmation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j=$json;const tr=j.trace||[];const r=j.toolResult?.result;const msg=j.toolResult?.ok?'Control operation '+j.operation+' completed.':'Control operation '+j.operation+' failed: '+(j.toolResult?.error||'unknown error');return [{json:{output:msg,message:msg,trace:tr,result:r,ok:!!j.toolResult?.ok,taskId:j.taskId,confirmation_required:!!j.toolResult?.confirmationRequired}}];"
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000012",
+      "name": "Format Control Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json; charset=utf-8"
+              }
+            ]
+          }
+        }
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000013",
+      "name": "RESPOND — Command",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2160,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j=$json;\nconst system=`You are Salyant's AI Operations Director for a single-CEO operating console.\nYou coordinate n8n, email, web research, memory, tasks, approvals, integrations and company data.\nReturn ONLY one JSON object with kind=tool_call, final, or confirmation_required.\n\nCORE BEHAVIOR:\n1. For multi-step work use Plan -> Execute -> Observe -> Verify -> Recover -> Report.\n2. Reuse the user's taskId and create/update task state for work that takes more than one tool call.\n3. Inspect before modifying production workflows. Prefer the smallest safe change.\n4. Before production activation/publishing, create a version snapshot and validate/test. Roll back when verification fails.\n5. Never expose secrets, API keys, OAuth tokens or credential values.\n6. Use memory_search before decisions that may depend on prior work; store durable outcomes and failures in memory.\n7. For current facts or research, use web_search and include source URLs in the final answer.\n8. For files/images, use attachment content when the Router supports multimodal input; never claim to have seen a file if it was not actually passed to the model.\n8a. For frontend repair, inspect frontend_recent_errors and github_get_file first; make the smallest change; prefer github_create_branch + github_update_file + github_create_pr; direct production updates/deploys require confirmation.\n9. Retry transient failures at most 3 times; then escalate instead of looping.\n10. Respect policy gates and budgets. Use JSM alerts for unresolved incidents when JIRA/JSM is configured; do not create duplicate alerts for the same failure signature. If a dangerous action is not explicitly confirmed, return confirmation_required.\n\nALLOWED TOOLS:\nlist_workflows,get_workflow,search_executions,get_execution,create_workflow,update_workflow,validate_workflow,run_workflow,activate_workflow,deactivate_workflow,publish_workflow,unpublish_workflow,delete_workflow,list_credentials,list_projects,list_tags,n8n_health,\nmail_accounts,mail_list,mail_send,\nweb_search,web_rerank,email_verify,\nmemory_search,memory_store,memory_delete,\ntask_create,task_update,task_get,task_list,\napproval_create,approval_list,approval_resolve,\naudit_log,usage_log,\nintegrations_list,integration_upsert,integration_remove,\ncrm_search,crm_upsert,event_emit,system_status,mcp_call,github_get_file,github_create_branch,github_update_file,github_create_pr,vercel_deploy,frontend_report,frontend_recent_errors,jsm_alerts,jsm_create_alert,jsm_ack_alert,jsm_close_alert,jsm_incidents,jsm_get_incident.\n\nPOLICY:\n- Read/search/inspect/research: automatic.\n- Create/update/validate/run/deactivate: automatic unless explicitly restricted by policy.\n- Activate/publish/delete workflows, bulk email, credential mutation, destructive MCP: confirmation_required unless confirmed=true.\n- Never delete or overwrite data just because it seems obsolete.\n- Preserve existing SDR business logic unless the user explicitly asks to change it.\n\nCurrent taskId: ${j.taskId}\nCurrent sessionId: ${j.sessionId}\nAttachments: ${JSON.stringify((j.attachments||[]).map(a=>({name:a.name,mime:a.mime,size:a.size})))}\n`;\nconst transcript=Array.isArray(j.transcript)?j.transcript:[];\nconst prompt=j.prompt||j.message||'';\nreturn [{json:{...j,system,prompt,temperature:0}}];"
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000014",
+      "name": "Build Router Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.mode }}",
+              "rightValue": "control",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c2d6d7b6-3d0f-4c11-98b3-000000000015",
+      "name": "Route After Tool",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "865c9469-fb5d-4086-88c5-8d3713b580e0",
+      "name": "SCHEDULE — CEO Autopilot Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1120,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ String($env.SALYANT_N8N_BASE_URL || 'https://n8n.salyant.co.uk').replace(/\\/$/,'') + '/webhook/salyant-sdr/api/command' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Salyant-Command-Secret",
+              "value": "={{ $env.SALYANT_COMMAND_SHARED_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"mode\":\"chat\",\"message\":\"Run CEO Autopilot daily brief. Review today's priorities, overnight changes, failures, approvals, important emails, workflow health and useful research. Execute only permitted low-risk work, create approvals for gated actions, verify changes, store durable outcomes, and return a concise CEO brief.\",\"sessionId\":\"ceo-autopilot-daily-\" + new Date().toISOString().slice(0,10)}",
+        "options": {}
+      },
+      "id": "88a3a561-b041-4409-ae13-5900f6d3be06",
+      "name": "RUN — CEO Autopilot Daily",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -840,
+        1000
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const h=$json.headers||{};const got=String(h['x-salyant-command-secret']||h['X-Salyant-Command-Secret']||'');const expected=String($env.SALYANT_COMMAND_SHARED_SECRET||'');if(!expected||got!==expected)throw new Error('Unauthorized Salyant API request.');return [{json:$json}];"
+      },
+      "id": "auth-authchat",
+      "name": "AUTH — Chat",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1650,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const h=$json.headers||{};const got=String(h['x-salyant-command-secret']||h['X-Salyant-Command-Secret']||'');const expected=String($env.SALYANT_COMMAND_SHARED_SECRET||'');if(!expected||got!==expected)throw new Error('Unauthorized Salyant API request.');return [{json:$json}];"
+      },
+      "id": "auth-authaccounts",
+      "name": "AUTH — Accounts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1650,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const h=$json.headers||{};const got=String(h['x-salyant-command-secret']||h['X-Salyant-Command-Secret']||'');const expected=String($env.SALYANT_COMMAND_SHARED_SECRET||'');if(!expected||got!==expected)throw new Error('Unauthorized Salyant API request.');return [{json:$json}];"
+      },
+      "id": "auth-authmail",
+      "name": "AUTH — Mail",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1650,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const h=$json.headers||{};const got=String(h['x-salyant-command-secret']||h['X-Salyant-Command-Secret']||'');const expected=String($env.SALYANT_COMMAND_SHARED_SECRET||'');if(!expected||got!==expected)throw new Error('Unauthorized Salyant API request.');return [{json:$json}];"
+      },
+      "id": "auth-authsend",
+      "name": "AUTH — Send",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1650,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const h=$json.headers||{};const got=String(h['x-salyant-command-secret']||h['X-Salyant-Command-Secret']||'');const expected=String($env.SALYANT_COMMAND_SHARED_SECRET||'');if(!expected||got!==expected)throw new Error('Unauthorized Salyant API request.');return [{json:$json}];"
+      },
+      "id": "auth-authhealth",
+      "name": "AUTH — Health",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1650,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "CHAT — /salyant-sdr/chat": {
+      "main": [
+        [
+          {
+            "node": "AUTH — Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Chat Request": {
+      "main": [
+        [
+          {
+            "node": "CALL — AI Router Sub-workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CALL — AI Router Sub-workflow": {
+      "main": [
+        [
+          {
+            "node": "Format AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format AI Response": {
+      "main": [
+        [
+          {
+            "node": "RESPOND — Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API — /salyant-sdr/api/accounts": {
+      "main": [
+        [
+          {
+            "node": "AUTH — Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — HR Account": {
+      "main": [
+        [
+          {
+            "node": "Aggregate 4 Zoho Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Main Account": {
+      "main": [
+        [
+          {
+            "node": "Aggregate 4 Zoho Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Sales Net Account": {
+      "main": [
+        [
+          {
+            "node": "Aggregate 4 Zoho Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Sales Way Account": {
+      "main": [
+        [
+          {
+            "node": "Aggregate 4 Zoho Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate 4 Zoho Accounts": {
+      "main": [
+        [
+          {
+            "node": "RESPOND — Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API — /salyant-sdr/api/mail": {
+      "main": [
+        [
+          {
+            "node": "AUTH — Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route — Mailbox": {
+      "main": [
+        [
+          {
+            "node": "ZOHO — HR Resolve Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ZOHO — Main Resolve Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ZOHO — Sales Net Resolve Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ZOHO — Sales Way Resolve Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — HR Resolve Account ID": {
+      "main": [
+        [
+          {
+            "node": "Extract — HR Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract — HR Account ID": {
+      "main": [
+        [
+          {
+            "node": "ZOHO — HR Get Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — HR Get Mail": {
+      "main": [
+        [
+          {
+            "node": "Normalize Mail Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Main Resolve Account ID": {
+      "main": [
+        [
+          {
+            "node": "Extract — Main Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract — Main Account ID": {
+      "main": [
+        [
+          {
+            "node": "ZOHO — Main Get Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Main Get Mail": {
+      "main": [
+        [
+          {
+            "node": "Normalize Mail Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Sales Net Resolve Account ID": {
+      "main": [
+        [
+          {
+            "node": "Extract — Sales Net Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract — Sales Net Account ID": {
+      "main": [
+        [
+          {
+            "node": "ZOHO — Sales Net Get Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Sales Net Get Mail": {
+      "main": [
+        [
+          {
+            "node": "Normalize Mail Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Sales Way Resolve Account ID": {
+      "main": [
+        [
+          {
+            "node": "Extract — Sales Way Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract — Sales Way Account ID": {
+      "main": [
+        [
+          {
+            "node": "ZOHO — Sales Way Get Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Sales Way Get Mail": {
+      "main": [
+        [
+          {
+            "node": "Normalize Mail Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Mail Response": {
+      "main": [
+        [
+          {
+            "node": "RESPOND — Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API — /salyant-sdr/api/send": {
+      "main": [
+        [
+          {
+            "node": "AUTH — Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Send Request": {
+      "main": [
+        [
+          {
+            "node": "Route — Send Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route — Send Mail": {
+      "main": [
+        [
+          {
+            "node": "ZOHO — HR Resolve Send Account",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ZOHO — Main Resolve Send Account",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ZOHO — Sales Net Resolve Send Account",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ZOHO — Sales Way Resolve Send Account",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — HR Resolve Send Account": {
+      "main": [
+        [
+          {
+            "node": "Extract — HR Send Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract — HR Send Account ID": {
+      "main": [
+        [
+          {
+            "node": "ZOHO — HR Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — HR Send": {
+      "main": [
+        [
+          {
+            "node": "Format Send Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Main Resolve Send Account": {
+      "main": [
+        [
+          {
+            "node": "Extract — Main Send Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract — Main Send Account ID": {
+      "main": [
+        [
+          {
+            "node": "ZOHO — Main Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Main Send": {
+      "main": [
+        [
+          {
+            "node": "Format Send Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Sales Net Resolve Send Account": {
+      "main": [
+        [
+          {
+            "node": "Extract — Sales Net Send Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract — Sales Net Send Account ID": {
+      "main": [
+        [
+          {
+            "node": "ZOHO — Sales Net Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Sales Net Send": {
+      "main": [
+        [
+          {
+            "node": "Format Send Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Sales Way Resolve Send Account": {
+      "main": [
+        [
+          {
+            "node": "Extract — Sales Way Send Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract — Sales Way Send Account ID": {
+      "main": [
+        [
+          {
+            "node": "ZOHO — Sales Way Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO — Sales Way Send": {
+      "main": [
+        [
+          {
+            "node": "Format Send Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Send Result": {
+      "main": [
+        [
+          {
+            "node": "RESPOND — Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HEALTH — /salyant-sdr/health": {
+      "main": [
+        [
+          {
+            "node": "AUTH — Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Health Response": {
+      "main": [
+        [
+          {
+            "node": "RESPOND — Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "COMMAND — /salyant-sdr/api/command": {
+      "main": [
+        [
+          {
+            "node": "Normalize Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Command": {
+      "main": [
+        [
+          {
+            "node": "Route Command Mode",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Command Mode": {
+      "main": [
+        [
+          {
+            "node": "Prepare Tool Call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Router Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Router Input": {
+      "main": [
+        [
+          {
+            "node": "AI Router — Operations Director",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Router — Operations Director": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Command": {
+      "main": [
+        [
+          {
+            "node": "Route AI Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route AI Decision": {
+      "main": [
+        [
+          {
+            "node": "Prepare Tool Call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Agent Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Tool Call": {
+      "main": [
+        [
+          {
+            "node": "Execute Control Tool",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Control Tool": {
+      "main": [
+        [
+          {
+            "node": "Route After Tool",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route After Tool": {
+      "main": [
+        [
+          {
+            "node": "Format Control Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Next Agent Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Next Agent Prompt": {
+      "main": [
+        [
+          {
+            "node": "Build Router Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Agent Response": {
+      "main": [
+        [
+          {
+            "node": "RESPOND — Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Confirmation": {
+      "main": [
+        [
+          {
+            "node": "RESPOND — Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Control Result": {
+      "main": [
+        [
+          {
+            "node": "RESPOND — Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SCHEDULE — CEO Autopilot Daily": {
+      "main": [
+        [
+          {
+            "node": "RUN — CEO Autopilot Daily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RUN — CEO Autopilot Daily": {
+      "main": [
+        []
+      ]
+    },
+    "AUTH — Chat": {
+      "main": [
+        {
+          "node": "Normalize Chat Request",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "AUTH — Accounts": {
+      "main": [
+        {
+          "node": "ZOHO — HR Account",
+          "type": "main",
+          "index": 0
+        },
+        {
+          "node": "ZOHO — Main Account",
+          "type": "main",
+          "index": 0
+        },
+        {
+          "node": "ZOHO — Sales Net Account",
+          "type": "main",
+          "index": 0
+        },
+        {
+          "node": "ZOHO — Sales Way Account",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "AUTH — Mail": {
+      "main": [
+        {
+          "node": "Route — Mailbox",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "AUTH — Send": {
+      "main": [
+        {
+          "node": "Normalize Send Request",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    },
+    "AUTH — Health": {
+      "main": [
+        {
+          "node": "Build Health Response",
+          "type": "main",
+          "index": 0
+        }
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "Asia/Kolkata",
+    "executionTimeout": 120,
+    "retryOnFail": true,
+    "maxExecutions": 100
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "description": "Original 4-Zoho SDR command backend plus protected AI n8n control plane. Set env vars N8N_API_KEY, N8N_API_BASE_URL, SALYANT_N8N_BASE_URL, SALYANT_COMMAND_SHARED_SECRET. Optional N8N_MCP_URL and N8N_MCP_BEARER_TOKEN."
+  },
+  "tags": [
+    "salyant",
+    "sdr",
+    "zoho",
+    "ai",
+    "backend"
+  ]
+}
