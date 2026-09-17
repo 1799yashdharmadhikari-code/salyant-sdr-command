@@ -1,0 +1,199 @@
+{
+  "name": "Salyant — Recovery Supervisor",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "02803a74-2b2a-4074-8f78-86a1e2e13144",
+      "name": "HOURLY — Recovery Supervisor",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.SALYANT_PUBLIC_HEALTH_URL || \"https://n8n.salyant.co.uk/webhook/salyant-sdr/health\"}}",
+        "options": {
+          "timeout": 10000
+        },
+        "responseFormat": "json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-salyant-command-secret",
+              "value": "={{$env.SALYANT_COMMAND_SHARED_SECRET}}"
+            }
+          ]
+        }
+      },
+      "id": "2a19a834-09f5-40ea-8b65-8a544081a9aa",
+      "name": "CHECK — Command Hub Health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const j=$json||{}; const ok=!!(j.ok===true || j.status==='ok' || j.healthy===true); return [{json:{ok, checkedAt:new Date().toISOString(), raw:j}}];"
+      },
+      "id": "0de48e94-f267-4ec8-acab-76bc621a2e0d",
+      "name": "ASSESS — Health",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.ok}}",
+              "operation": "isTrue"
+            }
+          ]
+        }
+      },
+      "id": "94fc0b6c-4d23-4c80-b568-9e8758e08fe1",
+      "name": "IF — Healthy",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        660,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SALYANT_COMMAND_URL}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-salyant-command-secret",
+              "value": "={{$env.SALYANT_COMMAND_SHARED_SECRET}}"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "jsonBody": "={{JSON.stringify({mode:\"chat\",message:\"SYSTEM RECOVERY EVENT: health check failed. Diagnose the Salyant Command Hub/n8n operational state, inspect recent failures, attempt only bounded low-risk recovery, verify the result, and escalate if unresolved. Do not delete data or make destructive changes. If the incident remains unresolved, create/update a Jira Service Management alert if JSM is configured; avoid duplicate alerts for the same failure signature.\",sessionId:\"recovery-supervisor\",account:\"system\",taskId:\"recovery-\"+Date.now().toString(36)})}}",
+        "options": {
+          "timeout": 120000
+        },
+        "responseFormat": "json"
+      },
+      "id": "eb94f4d0-d322-4b32-88c8-b237ed3e5732",
+      "name": "RECOVERY — Ask Operations Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        880,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{type:'recovery_supervisor',timestamp:new Date().toISOString(),result:$json}}];"
+      },
+      "id": "b8977b1a-c2f3-48de-9639-2958b27ddb1a",
+      "name": "LOG — Recovery Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        120
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HOURLY — Recovery Supervisor": {
+      "main": [
+        [
+          {
+            "node": "CHECK — Command Hub Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CHECK — Command Hub Health": {
+      "main": [
+        [
+          {
+            "node": "ASSESS — Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ASSESS — Health": {
+      "main": [
+        [
+          {
+            "node": "IF — Healthy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF — Healthy": {
+      "main": [
+        [],
+        [
+          {
+            "node": "RECOVERY — Ask Operations Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RECOVERY — Ask Operations Agent": {
+      "main": [
+        [
+          {
+            "node": "LOG — Recovery Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8aeff45c-7b05-4e1c-b533-dff7c00bb9c5",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
