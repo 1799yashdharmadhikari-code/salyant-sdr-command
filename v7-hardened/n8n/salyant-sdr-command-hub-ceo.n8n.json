@@ -1,5 +1,5 @@
 {
-  "name": "Salyant SDR Command — Backend (4 Zoho + AI Router + Control Plane)",
+  "name": "Salyant SDR Command \u2014 Backend (4 Zoho + AI Router + Control Plane)",
   "nodes": [
     {
       "parameters": {
@@ -11,7 +11,7 @@
         }
       },
       "id": "2d16ee74-af74-4965-94fb-0bc4b341fbb8",
-      "name": "CHAT — /salyant-sdr/chat",
+      "name": "CHAT \u2014 /salyant-sdr/chat",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
@@ -23,7 +23,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const b = $json.body ?? $json;\nreturn [{\n  json: {\n    chatInput: String(b.chatInput ?? b.message ?? '').trim(),\n    sessionId: String(b.sessionId ?? 'director-session'),\n    account: b.account ?? null,\n    source: 'salyant-sdr-command'\n  }\n}];"
+        "jsCode": "const b = $json.body ?? $json;\nconst message = String(b.chatInput ?? b.message ?? '').trim();\nreturn [{\n  json: {\n    chatInput: message,\n    system: 'You are the Salyant SDR assistant. Be concise, factual, and safe. '\n      + 'Never invent data about mailboxes, workflows, or contacts you have not been given.',\n    prompt: message,\n    temperature: 0.3,\n    sessionId: String(b.sessionId ?? 'director-session'),\n    account: b.account ?? null,\n    source: 'salyant-sdr-command'\n  }\n}];"
       },
       "id": "640ee44f-9b93-4a61-b3d1-6d013cf6edf5",
       "name": "Normalize Chat Request",
@@ -44,9 +44,12 @@
         "workflowInputs": {
           "mappingMode": "defineBelow",
           "value": {
-            "chatInput": "={{ $json.chatInput }}",
+            "system": "={{ $json.system }}",
+            "prompt": "={{ $json.prompt }}",
+            "temperature": "={{ $json.temperature }}",
             "sessionId": "={{ $json.sessionId }}",
-            "account": "={{ $json.account }}"
+            "account": "={{ $json.account }}",
+            "chatInput": "={{ $json.chatInput }}"
           },
           "matchingColumns": [],
           "schema": [],
@@ -55,7 +58,7 @@
         }
       },
       "id": "962f9941-a8aa-47a2-b084-4c540edb858d",
-      "name": "CALL — AI Router Sub-workflow",
+      "name": "CALL \u2014 AI Router Sub-workflow",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.1,
       "position": [
@@ -95,7 +98,7 @@
         }
       },
       "id": "28ca6811-6e35-4d02-9cfd-e35e3361a8c8",
-      "name": "RESPOND — Chat",
+      "name": "RESPOND \u2014 Chat",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
@@ -113,7 +116,7 @@
         }
       },
       "id": "1288b386-ed2d-4628-af73-4ae0ff52d344",
-      "name": "API — /salyant-sdr/api/accounts",
+      "name": "API \u2014 /salyant-sdr/api/accounts",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
@@ -128,7 +131,7 @@
         "operation": "get"
       },
       "id": "f466c4f5-407e-4139-926a-0982debe1de1",
-      "name": "ZOHO — HR Account",
+      "name": "ZOHO \u2014 HR Account",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -148,7 +151,7 @@
         "operation": "get"
       },
       "id": "839ddbad-aeb0-4979-8e87-99e1fe6c9799",
-      "name": "ZOHO — Main Account",
+      "name": "ZOHO \u2014 Main Account",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -168,7 +171,7 @@
         "operation": "get"
       },
       "id": "4f572529-d971-4e4e-ad23-04f2c90ceaad",
-      "name": "ZOHO — Sales Net Account",
+      "name": "ZOHO \u2014 Sales Net Account",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -188,7 +191,7 @@
         "operation": "get"
       },
       "id": "76847732-aca2-460d-b1db-5431766364e4",
-      "name": "ZOHO — Sales Way Account",
+      "name": "ZOHO \u2014 Sales Way Account",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -233,7 +236,7 @@
         }
       },
       "id": "1a6e67d5-adf2-4662-8552-4ee1c0fe0582",
-      "name": "RESPOND — Accounts",
+      "name": "RESPOND \u2014 Accounts",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
@@ -251,7 +254,7 @@
         }
       },
       "id": "03acd689-3f5e-44f2-b030-962b5ea5f2f2",
-      "name": "API — /salyant-sdr/api/mail",
+      "name": "API \u2014 /salyant-sdr/api/mail",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
@@ -357,7 +360,7 @@
         "options": {}
       },
       "id": "da71ae7c-9674-4a47-baf2-dd6ba5ff9952",
-      "name": "Route — Mailbox",
+      "name": "Route \u2014 Mailbox",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
@@ -371,7 +374,7 @@
         "operation": "get"
       },
       "id": "0fe32d89-db15-4d21-bb2d-f54343fe0703",
-      "name": "ZOHO — HR Resolve Account ID",
+      "name": "ZOHO \u2014 HR Resolve Account ID",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -388,10 +391,10 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const source = $('API — /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"hr@salyant.co.uk\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for hr@salyant.co.uk.');\nreturn [{json:{accountId, account:'acc-hr', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
+        "jsCode": "const source = $('API \u2014 /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"hr@salyant.co.uk\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for hr@salyant.co.uk.');\nreturn [{json:{accountId, account:'acc-hr', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
       },
       "id": "49981678-25d6-4a74-ad79-dff7970ee6dc",
-      "name": "Extract — HR Account ID",
+      "name": "Extract \u2014 HR Account ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -407,7 +410,7 @@
         "folderId": "={{ $json.folderId || $env.ZOHO_INBOX_FOLDER_ID || '' }}"
       },
       "id": "6cb7f38e-5465-4e33-b5a2-da878e811b40",
-      "name": "ZOHO — HR Get Mail",
+      "name": "ZOHO \u2014 HR Get Mail",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -427,7 +430,7 @@
         "operation": "get"
       },
       "id": "039c24b5-5989-4690-8e62-7e1fa946f197",
-      "name": "ZOHO — Main Resolve Account ID",
+      "name": "ZOHO \u2014 Main Resolve Account ID",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -444,10 +447,10 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const source = $('API — /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"yash@salyant.co.uk\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for yash@salyant.co.uk.');\nreturn [{json:{accountId, account:'acc-main', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
+        "jsCode": "const source = $('API \u2014 /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"yash@salyant.co.uk\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for yash@salyant.co.uk.');\nreturn [{json:{accountId, account:'acc-main', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
       },
       "id": "00710476-bcae-4a95-a371-e42239dc81f1",
-      "name": "Extract — Main Account ID",
+      "name": "Extract \u2014 Main Account ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -463,7 +466,7 @@
         "folderId": "={{ $json.folderId || $env.ZOHO_INBOX_FOLDER_ID || '' }}"
       },
       "id": "dafcab0c-e0da-4645-8b8e-fc46e52e21b2",
-      "name": "ZOHO — Main Get Mail",
+      "name": "ZOHO \u2014 Main Get Mail",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -483,7 +486,7 @@
         "operation": "get"
       },
       "id": "f4df0573-1942-45b9-8b5c-4d493390d218",
-      "name": "ZOHO — Sales Net Resolve Account ID",
+      "name": "ZOHO \u2014 Sales Net Resolve Account ID",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -500,10 +503,10 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const source = $('API — /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"automate@salyant.net\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for automate@salyant.net.');\nreturn [{json:{accountId, account:'acc-sales-net', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
+        "jsCode": "const source = $('API \u2014 /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"automate@salyant.net\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for automate@salyant.net.');\nreturn [{json:{accountId, account:'acc-sales-net', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
       },
       "id": "fcaf6203-a39c-427a-b933-30d5f267d535",
-      "name": "Extract — Sales Net Account ID",
+      "name": "Extract \u2014 Sales Net Account ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -519,7 +522,7 @@
         "folderId": "={{ $json.folderId || $env.ZOHO_INBOX_FOLDER_ID || '' }}"
       },
       "id": "94f030e7-c7bc-4757-a6d5-a00c21bb5c94",
-      "name": "ZOHO — Sales Net Get Mail",
+      "name": "ZOHO \u2014 Sales Net Get Mail",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -539,7 +542,7 @@
         "operation": "get"
       },
       "id": "e2e958e4-1f8e-4e9f-8649-22297cc660e3",
-      "name": "ZOHO — Sales Way Resolve Account ID",
+      "name": "ZOHO \u2014 Sales Way Resolve Account ID",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -556,10 +559,10 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const source = $('API — /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"ai@thesalyantway.co.uk\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for ai@thesalyantway.co.uk.');\nreturn [{json:{accountId, account:'acc-sales-way', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
+        "jsCode": "const source = $('API \u2014 /salyant-sdr/api/mail').first().json || {};\nconst raw = $json.data ?? $json;\nconst arr = Array.isArray(raw) ? raw : [raw];\nconst candidates = arr.filter(Boolean);\nconst wanted = \"ai@thesalyantway.co.uk\";\nconst a = candidates.find(x => (x.emailAddress||x.email||x.mailId||x.loginName) === wanted) || candidates[0] || {};\nconst accountId = String(a.accountId ?? a.accountid ?? a.id ?? '');\nif (!accountId) throw new Error('Zoho did not return an accountId for ai@thesalyantway.co.uk.');\nreturn [{json:{accountId, account:'acc-sales-way', addr:wanted, folderId:source.query?.folderId || source.body?.folderId || '', limit:Number(source.query?.limit || source.body?.limit || 25)}}];"
       },
       "id": "746e49b7-2eab-45a2-9f65-b43dcbdecd49",
-      "name": "Extract — Sales Way Account ID",
+      "name": "Extract \u2014 Sales Way Account ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -575,7 +578,7 @@
         "folderId": "={{ $json.folderId || $env.ZOHO_INBOX_FOLDER_ID || '' }}"
       },
       "id": "10a80c9c-68a4-418e-96d9-d71f5a4c46ca",
-      "name": "ZOHO — Sales Way Get Mail",
+      "name": "ZOHO \u2014 Sales Way Get Mail",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -592,7 +595,7 @@
     {
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "const out=[];\nfor (const item of $input.all()) {\n  const j=item.json??{};\n  const data=Array.isArray(j.data)?j.data:(j.data?[j.data]:[]);\n  for (const m of data) {\n    out.push({\n      messageId:m.messageId ?? m.messageID ?? m.id ?? null,\n      threadId:m.threadId ?? null,\n      folderId:m.folderId ?? null,\n      subject:m.subject ?? '',\n      from:m.fromAddress ?? m.sender ?? '',\n      to:m.toAddress ?? '',\n      receivedAt:m.receivedTime ?? m.sentDateInGMT ?? null,\n      summary:m.summary ?? '',\n      hasAttachment:m.hasAttachment === true || m.hasAttachment === '1' || m.hasAttachment === 1,\n      raw:m\n    });\n  }\n}\nout.sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));\nconst limit=Number($node['API — /salyant-sdr/api/mail'].json.query?.limit || 25);\nreturn [{json:{messages:out.slice(0,Math.max(1,Math.min(limit,100))),count:out.length}}];"
+        "jsCode": "const out=[];\nfor (const item of $input.all()) {\n  const j=item.json??{};\n  const data=Array.isArray(j.data)?j.data:(j.data?[j.data]:[]);\n  for (const m of data) {\n    out.push({\n      messageId:m.messageId ?? m.messageID ?? m.id ?? null,\n      threadId:m.threadId ?? null,\n      folderId:m.folderId ?? null,\n      subject:m.subject ?? '',\n      from:m.fromAddress ?? m.sender ?? '',\n      to:m.toAddress ?? '',\n      receivedAt:m.receivedTime ?? m.sentDateInGMT ?? null,\n      summary:m.summary ?? '',\n      hasAttachment:m.hasAttachment === true || m.hasAttachment === '1' || m.hasAttachment === 1,\n      raw:m\n    });\n  }\n}\nout.sort((a,b)=>Number(b.receivedAt||0)-Number(a.receivedAt||0));\nconst limit=Number($node['API \u2014 /salyant-sdr/api/mail'].json.query?.limit || 25);\nreturn [{json:{messages:out.slice(0,Math.max(1,Math.min(limit,100))),count:out.length}}];"
       },
       "id": "2d5faaa5-5245-4eb2-85b9-6432ce311502",
       "name": "Normalize Mail Response",
@@ -620,7 +623,7 @@
         }
       },
       "id": "5787f3ba-968d-42d1-a1d6-1d91c24f5174",
-      "name": "RESPOND — Mail",
+      "name": "RESPOND \u2014 Mail",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
@@ -638,7 +641,7 @@
         }
       },
       "id": "bbfe0631-f78e-40e6-83bc-f9331176e27b",
-      "name": "API — /salyant-sdr/api/send",
+      "name": "API \u2014 /salyant-sdr/api/send",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
@@ -758,7 +761,7 @@
         "options": {}
       },
       "id": "eaf0f359-0aa1-4911-b07b-60888a8899e4",
-      "name": "Route — Send Mail",
+      "name": "Route \u2014 Send Mail",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
@@ -779,7 +782,7 @@
         "askReceipt": "={{$json.askReceipt}}"
       },
       "id": "773c1ed6-69d0-4680-83ac-c472ea5e4133",
-      "name": "ZOHO — HR Send",
+      "name": "ZOHO \u2014 HR Send",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -806,7 +809,7 @@
         "askReceipt": "={{$json.askReceipt}}"
       },
       "id": "6f7fffdc-7b09-4ae9-9cbe-edada235c1c1",
-      "name": "ZOHO — Main Send",
+      "name": "ZOHO \u2014 Main Send",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -833,7 +836,7 @@
         "askReceipt": "={{$json.askReceipt}}"
       },
       "id": "3ce2fe46-c74a-4d17-b300-114a606ca3d1",
-      "name": "ZOHO — Sales Net Send",
+      "name": "ZOHO \u2014 Sales Net Send",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -860,7 +863,7 @@
         "askReceipt": "={{$json.askReceipt}}"
       },
       "id": "aa267eb7-adf9-4e0a-bc54-99769e9d273f",
-      "name": "ZOHO — Sales Way Send",
+      "name": "ZOHO \u2014 Sales Way Send",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -905,7 +908,7 @@
         }
       },
       "id": "270aaab3-9f61-46a2-a653-7034803049da",
-      "name": "RESPOND — Send",
+      "name": "RESPOND \u2014 Send",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
@@ -923,7 +926,7 @@
         }
       },
       "id": "e03e8684-b6cd-44da-97fa-2a850462d91c",
-      "name": "HEALTH — /salyant-sdr/health",
+      "name": "HEALTH \u2014 /salyant-sdr/health",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
@@ -963,7 +966,7 @@
         }
       },
       "id": "82e1dcc4-b29d-4d79-a08b-9e7544fb38e3",
-      "name": "RESPOND — Health",
+      "name": "RESPOND \u2014 Health",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
@@ -977,7 +980,7 @@
         "operation": "get"
       },
       "id": "resolve-send-acc-hr",
-      "name": "ZOHO — HR Resolve Send Account",
+      "name": "ZOHO \u2014 HR Resolve Send Account",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -997,7 +1000,7 @@
         "jsCode": "const req=$('Normalize Send Request').first().json;\nconst r=$json;\nconst id=r.data?.[0]?.accountId ?? r.data?.accounts?.[0]?.accountId ?? r.accountId ?? r.accounts?.[0]?.accountId ?? null;\nif(!id) throw new Error('Zoho did not return an accountId for hr@salyant.co.uk.');\nreturn [{json:{...req, accountId:id}}];"
       },
       "id": "extract-send-acc-hr",
-      "name": "Extract — HR Send Account ID",
+      "name": "Extract \u2014 HR Send Account ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1011,7 +1014,7 @@
         "operation": "get"
       },
       "id": "resolve-send-acc-main",
-      "name": "ZOHO — Main Resolve Send Account",
+      "name": "ZOHO \u2014 Main Resolve Send Account",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -1031,7 +1034,7 @@
         "jsCode": "const req=$('Normalize Send Request').first().json;\nconst r=$json;\nconst id=r.data?.[0]?.accountId ?? r.data?.accounts?.[0]?.accountId ?? r.accountId ?? r.accounts?.[0]?.accountId ?? null;\nif(!id) throw new Error('Zoho did not return an accountId for yash@salyant.co.uk.');\nreturn [{json:{...req, accountId:id}}];"
       },
       "id": "extract-send-acc-main",
-      "name": "Extract — Main Send Account ID",
+      "name": "Extract \u2014 Main Send Account ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1045,7 +1048,7 @@
         "operation": "get"
       },
       "id": "resolve-send-acc-sales-net",
-      "name": "ZOHO — Sales Net Resolve Send Account",
+      "name": "ZOHO \u2014 Sales Net Resolve Send Account",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -1065,7 +1068,7 @@
         "jsCode": "const req=$('Normalize Send Request').first().json;\nconst r=$json;\nconst id=r.data?.[0]?.accountId ?? r.data?.accounts?.[0]?.accountId ?? r.accountId ?? r.accounts?.[0]?.accountId ?? null;\nif(!id) throw new Error('Zoho did not return an accountId for automate@salyant.net.');\nreturn [{json:{...req, accountId:id}}];"
       },
       "id": "extract-send-acc-sales-net",
-      "name": "Extract — Sales Net Send Account ID",
+      "name": "Extract \u2014 Sales Net Send Account ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1079,7 +1082,7 @@
         "operation": "get"
       },
       "id": "resolve-send-acc-sales-way",
-      "name": "ZOHO — Sales Way Resolve Send Account",
+      "name": "ZOHO \u2014 Sales Way Resolve Send Account",
       "type": "n8n-nodes-zoho-mail.zohoMail",
       "typeVersion": 1,
       "position": [
@@ -1099,7 +1102,7 @@
         "jsCode": "const req=$('Normalize Send Request').first().json;\nconst r=$json;\nconst id=r.data?.[0]?.accountId ?? r.data?.accounts?.[0]?.accountId ?? r.accountId ?? r.accounts?.[0]?.accountId ?? null;\nif(!id) throw new Error('Zoho did not return an accountId for ai@thesalyantway.co.uk.');\nreturn [{json:{...req, accountId:id}}];"
       },
       "id": "extract-send-acc-sales-way",
-      "name": "Extract — Sales Way Send Account ID",
+      "name": "Extract \u2014 Sales Way Send Account ID",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1115,7 +1118,7 @@
         "options": {}
       },
       "id": "c2d6d7b6-3d0f-4c11-98b3-000000000001",
-      "name": "COMMAND — /salyant-sdr/api/command",
+      "name": "COMMAND \u2014 /salyant-sdr/api/command",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
@@ -1224,7 +1227,7 @@
         "options": {}
       },
       "id": "c2d6d7b6-3d0f-4c11-98b3-000000000004",
-      "name": "AI Router — Operations Director",
+      "name": "AI Router \u2014 Operations Director",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
@@ -1426,7 +1429,7 @@
         }
       },
       "id": "c2d6d7b6-3d0f-4c11-98b3-000000000013",
-      "name": "RESPOND — Command",
+      "name": "RESPOND \u2014 Command",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
@@ -1491,7 +1494,7 @@
         }
       },
       "id": "865c9469-fb5d-4086-88c5-8d3713b580e0",
-      "name": "SCHEDULE — CEO Autopilot Daily",
+      "name": "SCHEDULE \u2014 CEO Autopilot Daily",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -1523,7 +1526,7 @@
         "options": {}
       },
       "id": "88a3a561-b041-4409-ae13-5900f6d3be06",
-      "name": "RUN — CEO Autopilot Daily",
+      "name": "RUN \u2014 CEO Autopilot Daily",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -1537,7 +1540,7 @@
         "jsCode": "const h=$json.headers||{};const got=String(h['x-salyant-command-secret']||h['X-Salyant-Command-Secret']||'');const expected=String($env.SALYANT_COMMAND_SHARED_SECRET||'');if(!expected||got!==expected)throw new Error('Unauthorized Salyant API request.');return [{json:$json}];"
       },
       "id": "auth-authchat",
-      "name": "AUTH — Chat",
+      "name": "AUTH \u2014 Chat",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1551,7 +1554,7 @@
         "jsCode": "const h=$json.headers||{};const got=String(h['x-salyant-command-secret']||h['X-Salyant-Command-Secret']||'');const expected=String($env.SALYANT_COMMAND_SHARED_SECRET||'');if(!expected||got!==expected)throw new Error('Unauthorized Salyant API request.');return [{json:$json}];"
       },
       "id": "auth-authaccounts",
-      "name": "AUTH — Accounts",
+      "name": "AUTH \u2014 Accounts",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1565,7 +1568,7 @@
         "jsCode": "const h=$json.headers||{};const got=String(h['x-salyant-command-secret']||h['X-Salyant-Command-Secret']||'');const expected=String($env.SALYANT_COMMAND_SHARED_SECRET||'');if(!expected||got!==expected)throw new Error('Unauthorized Salyant API request.');return [{json:$json}];"
       },
       "id": "auth-authmail",
-      "name": "AUTH — Mail",
+      "name": "AUTH \u2014 Mail",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1579,7 +1582,7 @@
         "jsCode": "const h=$json.headers||{};const got=String(h['x-salyant-command-secret']||h['X-Salyant-Command-Secret']||'');const expected=String($env.SALYANT_COMMAND_SHARED_SECRET||'');if(!expected||got!==expected)throw new Error('Unauthorized Salyant API request.');return [{json:$json}];"
       },
       "id": "auth-authsend",
-      "name": "AUTH — Send",
+      "name": "AUTH \u2014 Send",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1593,7 +1596,7 @@
         "jsCode": "const h=$json.headers||{};const got=String(h['x-salyant-command-secret']||h['X-Salyant-Command-Secret']||'');const expected=String($env.SALYANT_COMMAND_SHARED_SECRET||'');if(!expected||got!==expected)throw new Error('Unauthorized Salyant API request.');return [{json:$json}];"
       },
       "id": "auth-authhealth",
-      "name": "AUTH — Health",
+      "name": "AUTH \u2014 Health",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -1603,11 +1606,11 @@
     }
   ],
   "connections": {
-    "CHAT — /salyant-sdr/chat": {
+    "CHAT \u2014 /salyant-sdr/chat": {
       "main": [
         [
           {
-            "node": "AUTH — Chat",
+            "node": "AUTH \u2014 Chat",
             "type": "main",
             "index": 0
           }
@@ -1618,14 +1621,14 @@
       "main": [
         [
           {
-            "node": "CALL — AI Router Sub-workflow",
+            "node": "CALL \u2014 AI Router Sub-workflow",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "CALL — AI Router Sub-workflow": {
+    "CALL \u2014 AI Router Sub-workflow": {
       "main": [
         [
           {
@@ -1640,36 +1643,25 @@
       "main": [
         [
           {
-            "node": "RESPOND — Chat",
+            "node": "RESPOND \u2014 Chat",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "API — /salyant-sdr/api/accounts": {
+    "API \u2014 /salyant-sdr/api/accounts": {
       "main": [
         [
           {
-            "node": "AUTH — Accounts",
+            "node": "AUTH \u2014 Accounts",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ZOHO — HR Account": {
-      "main": [
-        [
-          {
-            "node": "Aggregate 4 Zoho Accounts",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "ZOHO — Main Account": {
+    "ZOHO \u2014 HR Account": {
       "main": [
         [
           {
@@ -1680,7 +1672,7 @@
         ]
       ]
     },
-    "ZOHO — Sales Net Account": {
+    "ZOHO \u2014 Main Account": {
       "main": [
         [
           {
@@ -1691,7 +1683,18 @@
         ]
       ]
     },
-    "ZOHO — Sales Way Account": {
+    "ZOHO \u2014 Sales Net Account": {
+      "main": [
+        [
+          {
+            "node": "Aggregate 4 Zoho Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO \u2014 Sales Way Account": {
       "main": [
         [
           {
@@ -1706,79 +1709,79 @@
       "main": [
         [
           {
-            "node": "RESPOND — Accounts",
+            "node": "RESPOND \u2014 Accounts",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "API — /salyant-sdr/api/mail": {
+    "API \u2014 /salyant-sdr/api/mail": {
       "main": [
         [
           {
-            "node": "AUTH — Mail",
+            "node": "AUTH \u2014 Mail",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Route — Mailbox": {
+    "Route \u2014 Mailbox": {
       "main": [
         [
           {
-            "node": "ZOHO — HR Resolve Account ID",
+            "node": "ZOHO \u2014 HR Resolve Account ID",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "ZOHO — Main Resolve Account ID",
+            "node": "ZOHO \u2014 Main Resolve Account ID",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "ZOHO — Sales Net Resolve Account ID",
+            "node": "ZOHO \u2014 Sales Net Resolve Account ID",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "ZOHO — Sales Way Resolve Account ID",
+            "node": "ZOHO \u2014 Sales Way Resolve Account ID",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ZOHO — HR Resolve Account ID": {
+    "ZOHO \u2014 HR Resolve Account ID": {
       "main": [
         [
           {
-            "node": "Extract — HR Account ID",
+            "node": "Extract \u2014 HR Account ID",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract — HR Account ID": {
+    "Extract \u2014 HR Account ID": {
       "main": [
         [
           {
-            "node": "ZOHO — HR Get Mail",
+            "node": "ZOHO \u2014 HR Get Mail",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ZOHO — HR Get Mail": {
+    "ZOHO \u2014 HR Get Mail": {
       "main": [
         [
           {
@@ -1789,62 +1792,29 @@
         ]
       ]
     },
-    "ZOHO — Main Resolve Account ID": {
+    "ZOHO \u2014 Main Resolve Account ID": {
       "main": [
         [
           {
-            "node": "Extract — Main Account ID",
+            "node": "Extract \u2014 Main Account ID",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract — Main Account ID": {
+    "Extract \u2014 Main Account ID": {
       "main": [
         [
           {
-            "node": "ZOHO — Main Get Mail",
+            "node": "ZOHO \u2014 Main Get Mail",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ZOHO — Main Get Mail": {
-      "main": [
-        [
-          {
-            "node": "Normalize Mail Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "ZOHO — Sales Net Resolve Account ID": {
-      "main": [
-        [
-          {
-            "node": "Extract — Sales Net Account ID",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract — Sales Net Account ID": {
-      "main": [
-        [
-          {
-            "node": "ZOHO — Sales Net Get Mail",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "ZOHO — Sales Net Get Mail": {
+    "ZOHO \u2014 Main Get Mail": {
       "main": [
         [
           {
@@ -1855,29 +1825,62 @@
         ]
       ]
     },
-    "ZOHO — Sales Way Resolve Account ID": {
+    "ZOHO \u2014 Sales Net Resolve Account ID": {
       "main": [
         [
           {
-            "node": "Extract — Sales Way Account ID",
+            "node": "Extract \u2014 Sales Net Account ID",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract — Sales Way Account ID": {
+    "Extract \u2014 Sales Net Account ID": {
       "main": [
         [
           {
-            "node": "ZOHO — Sales Way Get Mail",
+            "node": "ZOHO \u2014 Sales Net Get Mail",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ZOHO — Sales Way Get Mail": {
+    "ZOHO \u2014 Sales Net Get Mail": {
+      "main": [
+        [
+          {
+            "node": "Normalize Mail Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO \u2014 Sales Way Resolve Account ID": {
+      "main": [
+        [
+          {
+            "node": "Extract \u2014 Sales Way Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract \u2014 Sales Way Account ID": {
+      "main": [
+        [
+          {
+            "node": "ZOHO \u2014 Sales Way Get Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO \u2014 Sales Way Get Mail": {
       "main": [
         [
           {
@@ -1892,18 +1895,18 @@
       "main": [
         [
           {
-            "node": "RESPOND — Mail",
+            "node": "RESPOND \u2014 Mail",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "API — /salyant-sdr/api/send": {
+    "API \u2014 /salyant-sdr/api/send": {
       "main": [
         [
           {
-            "node": "AUTH — Send",
+            "node": "AUTH \u2014 Send",
             "type": "main",
             "index": 0
           }
@@ -1914,68 +1917,68 @@
       "main": [
         [
           {
-            "node": "Route — Send Mail",
+            "node": "Route \u2014 Send Mail",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Route — Send Mail": {
+    "Route \u2014 Send Mail": {
       "main": [
         [
           {
-            "node": "ZOHO — HR Resolve Send Account",
+            "node": "ZOHO \u2014 HR Resolve Send Account",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "ZOHO — Main Resolve Send Account",
+            "node": "ZOHO \u2014 Main Resolve Send Account",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "ZOHO — Sales Net Resolve Send Account",
+            "node": "ZOHO \u2014 Sales Net Resolve Send Account",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "ZOHO — Sales Way Resolve Send Account",
+            "node": "ZOHO \u2014 Sales Way Resolve Send Account",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ZOHO — HR Resolve Send Account": {
+    "ZOHO \u2014 HR Resolve Send Account": {
       "main": [
         [
           {
-            "node": "Extract — HR Send Account ID",
+            "node": "Extract \u2014 HR Send Account ID",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract — HR Send Account ID": {
+    "Extract \u2014 HR Send Account ID": {
       "main": [
         [
           {
-            "node": "ZOHO — HR Send",
+            "node": "ZOHO \u2014 HR Send",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ZOHO — HR Send": {
+    "ZOHO \u2014 HR Send": {
       "main": [
         [
           {
@@ -1986,62 +1989,29 @@
         ]
       ]
     },
-    "ZOHO — Main Resolve Send Account": {
+    "ZOHO \u2014 Main Resolve Send Account": {
       "main": [
         [
           {
-            "node": "Extract — Main Send Account ID",
+            "node": "Extract \u2014 Main Send Account ID",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract — Main Send Account ID": {
+    "Extract \u2014 Main Send Account ID": {
       "main": [
         [
           {
-            "node": "ZOHO — Main Send",
+            "node": "ZOHO \u2014 Main Send",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ZOHO — Main Send": {
-      "main": [
-        [
-          {
-            "node": "Format Send Result",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "ZOHO — Sales Net Resolve Send Account": {
-      "main": [
-        [
-          {
-            "node": "Extract — Sales Net Send Account ID",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Extract — Sales Net Send Account ID": {
-      "main": [
-        [
-          {
-            "node": "ZOHO — Sales Net Send",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "ZOHO — Sales Net Send": {
+    "ZOHO \u2014 Main Send": {
       "main": [
         [
           {
@@ -2052,29 +2022,62 @@
         ]
       ]
     },
-    "ZOHO — Sales Way Resolve Send Account": {
+    "ZOHO \u2014 Sales Net Resolve Send Account": {
       "main": [
         [
           {
-            "node": "Extract — Sales Way Send Account ID",
+            "node": "Extract \u2014 Sales Net Send Account ID",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract — Sales Way Send Account ID": {
+    "Extract \u2014 Sales Net Send Account ID": {
       "main": [
         [
           {
-            "node": "ZOHO — Sales Way Send",
+            "node": "ZOHO \u2014 Sales Net Send",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "ZOHO — Sales Way Send": {
+    "ZOHO \u2014 Sales Net Send": {
+      "main": [
+        [
+          {
+            "node": "Format Send Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO \u2014 Sales Way Resolve Send Account": {
+      "main": [
+        [
+          {
+            "node": "Extract \u2014 Sales Way Send Account ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract \u2014 Sales Way Send Account ID": {
+      "main": [
+        [
+          {
+            "node": "ZOHO \u2014 Sales Way Send",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ZOHO \u2014 Sales Way Send": {
       "main": [
         [
           {
@@ -2089,18 +2092,18 @@
       "main": [
         [
           {
-            "node": "RESPOND — Send",
+            "node": "RESPOND \u2014 Send",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "HEALTH — /salyant-sdr/health": {
+    "HEALTH \u2014 /salyant-sdr/health": {
       "main": [
         [
           {
-            "node": "AUTH — Health",
+            "node": "AUTH \u2014 Health",
             "type": "main",
             "index": 0
           }
@@ -2111,14 +2114,14 @@
       "main": [
         [
           {
-            "node": "RESPOND — Health",
+            "node": "RESPOND \u2014 Health",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "COMMAND — /salyant-sdr/api/command": {
+    "COMMAND \u2014 /salyant-sdr/api/command": {
       "main": [
         [
           {
@@ -2162,14 +2165,14 @@
       "main": [
         [
           {
-            "node": "AI Router — Operations Director",
+            "node": "AI Router \u2014 Operations Director",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "AI Router — Operations Director": {
+    "AI Router \u2014 Operations Director": {
       "main": [
         [
           {
@@ -2271,7 +2274,7 @@
       "main": [
         [
           {
-            "node": "RESPOND — Command",
+            "node": "RESPOND \u2014 Command",
             "type": "main",
             "index": 0
           }
@@ -2282,7 +2285,7 @@
       "main": [
         [
           {
-            "node": "RESPOND — Command",
+            "node": "RESPOND \u2014 Command",
             "type": "main",
             "index": 0
           }
@@ -2293,30 +2296,30 @@
       "main": [
         [
           {
-            "node": "RESPOND — Command",
+            "node": "RESPOND \u2014 Command",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "SCHEDULE — CEO Autopilot Daily": {
+    "SCHEDULE \u2014 CEO Autopilot Daily": {
       "main": [
         [
           {
-            "node": "RUN — CEO Autopilot Daily",
+            "node": "RUN \u2014 CEO Autopilot Daily",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "RUN — CEO Autopilot Daily": {
+    "RUN \u2014 CEO Autopilot Daily": {
       "main": [
         []
       ]
     },
-    "AUTH — Chat": {
+    "AUTH \u2014 Chat": {
       "main": [
         {
           "node": "Normalize Chat Request",
@@ -2325,40 +2328,40 @@
         }
       ]
     },
-    "AUTH — Accounts": {
+    "AUTH \u2014 Accounts": {
       "main": [
         {
-          "node": "ZOHO — HR Account",
+          "node": "ZOHO \u2014 HR Account",
           "type": "main",
           "index": 0
         },
         {
-          "node": "ZOHO — Main Account",
+          "node": "ZOHO \u2014 Main Account",
           "type": "main",
           "index": 0
         },
         {
-          "node": "ZOHO — Sales Net Account",
+          "node": "ZOHO \u2014 Sales Net Account",
           "type": "main",
           "index": 0
         },
         {
-          "node": "ZOHO — Sales Way Account",
+          "node": "ZOHO \u2014 Sales Way Account",
           "type": "main",
           "index": 0
         }
       ]
     },
-    "AUTH — Mail": {
+    "AUTH \u2014 Mail": {
       "main": [
         {
-          "node": "Route — Mailbox",
+          "node": "Route \u2014 Mailbox",
           "type": "main",
           "index": 0
         }
       ]
     },
-    "AUTH — Send": {
+    "AUTH \u2014 Send": {
       "main": [
         {
           "node": "Normalize Send Request",
@@ -2367,7 +2370,7 @@
         }
       ]
     },
-    "AUTH — Health": {
+    "AUTH \u2014 Health": {
       "main": [
         {
           "node": "Build Health Response",
