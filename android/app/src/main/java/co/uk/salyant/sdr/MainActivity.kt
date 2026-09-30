@@ -1,8 +1,16 @@
 package co.uk.salyant.sdr
 
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -15,26 +23,41 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -42,28 +65,69 @@ import java.net.URL
 import java.net.URLEncoder
 
 private const val API_BASE = "https://n8n.salyant.co.uk/webhook/salyant-sdr"
-private val Bg = Color(0xFF07080C)
-private val Bg2 = Color(0xFF0B0D14)
-private val Glass = Color(0x0DFFFFFF)
-private val GlassStrong = Color(0x14FFFFFF)
-private val GlassSolid = Color(0xFF12141C)
-private val Border = Color(0x17FFFFFF)
-private val BorderStrong = Color(0x29FFFFFF)
-private val TextMain = Color(0xFFF3F5FA)
-private val Muted = Color(0xFF9AA3B8)
-private val Muted2 = Color(0xFF666F84)
-private val Accent = Color(0xFF5B6EF5)
-private val Accent2 = Color(0xFF33D9B0)
-private val Warn = Color(0xFFF5A455)
-private val Danger = Color(0xFFFF6B6B)
-private val Purple = Color(0xFF9B6BF5)
+private const val PREFS = "salyant_settings"
+
+private data class Palette(
+    val bg: Color,
+    val bg2: Color,
+    val glass: Color,
+    val glassStrong: Color,
+    val solid: Color,
+    val border: Color,
+    val borderStrong: Color,
+    val text: Color,
+    val muted: Color,
+    val muted2: Color,
+    val accent: Color,
+    val accent2: Color,
+    val warn: Color,
+    val danger: Color,
+    val purple: Color
+)
+
+private val DarkPalette = Palette(
+    Color(0xFF07080C), Color(0xFF0B0D14), Color(0x121B1D28), Color(0x1BFFFFFF),
+    Color(0xFF12141C), Color(0x2AFFFFFF), Color(0x3DFFFFFF),
+    Color(0xFFF3F5FA), Color(0xFFA7B0C4), Color(0xFF707A91),
+    Color(0xFF6073FF), Color(0xFF35D9B2), Color(0xFFF5A455), Color(0xFFFF6B6B),
+    Color(0xFF9C74F7)
+)
+
+private val LightPalette = Palette(
+    Color(0xFFF4F7FB), Color(0xFFEDF2F8), Color(0xD9FFFFFF), Color(0xF2FFFFFF),
+    Color(0xFFFFFFFF), Color(0x260B1220), Color(0x4510182A),
+    Color(0xFF111827), Color(0xFF667085), Color(0xFF98A2B3),
+    Color(0xFF5165E9), Color(0xFF10B88F), Color(0xFFD98524), Color(0xFFD64545),
+    Color(0xFF7650D8)
+)
+
+private val PaletteState = mutableStateOf(DarkPalette)
+private val Bg get() = PaletteState.value.bg
+private val Bg2 get() = PaletteState.value.bg2
+private val Glass get() = PaletteState.value.glass
+private val GlassStrong get() = PaletteState.value.glassStrong
+private val GlassSolid get() = PaletteState.value.solid
+private val Border get() = PaletteState.value.border
+private val BorderStrong get() = PaletteState.value.borderStrong
+private val TextMain get() = PaletteState.value.text
+private val Muted get() = PaletteState.value.muted
+private val Muted2 get() = PaletteState.value.muted2
+private val Accent get() = PaletteState.value.accent
+private val Accent2 get() = PaletteState.value.accent2
+private val Warn get() = PaletteState.value.warn
+private val Danger get() = PaletteState.value.danger
+private val Purple get() = PaletteState.value.purple
 
 data class Account(val id:String,val name:String,val email:String,val unread:Int=0,val hot:Int=0,val guardrail:Int=0)
 data class Mail(val id:String,val from:String,val subject:String,val body:String,val unread:Boolean)
 data class Health(val ok:Boolean,val message:String)
 object SalyantApi {
+    @Volatile private var baseUrl = API_BASE
+
+    fun setBaseUrl(value:String){ baseUrl=value.trim().trimEnd('/') }
+
     private suspend fun request(path:String, method:String="GET", body:String?=null):JSONObject = withContext(Dispatchers.IO) {
-        val c=URL(API_BASE+path).openConnection() as HttpURLConnection
+        val c=URL(baseUrl+path).openConnection() as HttpURLConnection
         c.requestMethod=method; c.connectTimeout=10000; c.readTimeout=20000
         c.setRequestProperty("Accept","application/json")
         if(body!=null){ c.doOutput=true; c.setRequestProperty("Content-Type","application/json"); c.outputStream.use{it.write(body.toByteArray())} }
@@ -88,6 +152,49 @@ object SalyantApi {
     }
 }
 
+enum class Appearance{SYSTEM,DARK_GLASS,LIGHT_GLASS}
+
+object SettingsStore{
+    private fun p(c:Context)=c.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+    fun appearance(c:Context)=runCatching{Appearance.valueOf(p(c).getString("appearance","SYSTEM")?:"SYSTEM")}.getOrDefault(Appearance.SYSTEM)
+    fun saveAppearance(c:Context,v:Appearance)=p(c).edit().putString("appearance",v.name).apply()
+    fun notifications(c:Context)=p(c).getBoolean("notifications",NotificationManagerCompat.from(c).areNotificationsEnabled())
+    fun saveNotifications(c:Context,v:Boolean)=p(c).edit().putBoolean("notifications",v).apply()
+    fun backgroundMonitor(c:Context)=p(c).getBoolean("background_monitor",true)
+    fun saveBackgroundMonitor(c:Context,v:Boolean)=p(c).edit().putBoolean("background_monitor",v).apply()
+    fun autoRefresh(c:Context)=p(c).getBoolean("auto_refresh",true)
+    fun saveAutoRefresh(c:Context,v:Boolean)=p(c).edit().putBoolean("auto_refresh",v).apply()
+    fun compact(c:Context)=p(c).getBoolean("compact",false)
+    fun saveCompact(c:Context,v:Boolean)=p(c).edit().putBoolean("compact",v).apply()
+    fun n8nBase(c:Context)=p(c).getString("n8n_base",API_BASE) ?: API_BASE
+    fun saveN8nBase(c:Context,v:String)=p(c).edit().putString("n8n_base",v).apply()
+}
+
+object HealthHistory{
+    private const val KEY="health_history"
+    fun record(c:Context,ok:Boolean){
+        val p=c.getSharedPreferences(PREFS,Context.MODE_PRIVATE)
+        val old=p.getString(KEY,"")?:""
+        p.edit().putString(KEY,(old+if(ok)"1" else "0").takeLast(48)).apply()
+    }
+    fun read(c:Context)=(c.getSharedPreferences(PREFS,Context.MODE_PRIVATE).getString(KEY,"")?:"").map{it=='1'}
+}
+
+object NotificationController{
+    const val CHANNEL_ID="salyant_operations"
+    fun ensureChannel(c:Context){
+        if(Build.VERSION.SDK_INT<26)return
+        val m=c.getSystemService(NotificationManager::class.java)
+        m.createNotificationChannel(NotificationChannel(CHANNEL_ID,"SALYANT operations",NotificationManager.IMPORTANCE_HIGH).apply{
+            description="Important SDR backend and operational status changes"
+        })
+    }
+    fun allowed(c:Context):Boolean{
+        if(!NotificationManagerCompat.from(c).areNotificationsEnabled())return false
+        return Build.VERSION.SDK_INT<33 || ContextCompat.checkSelfPermission(c,Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED
+    }
+}
+
 class MainActivity:ComponentActivity(){
     override fun onCreate(savedInstanceState:Bundle?){
         super.onCreate(savedInstanceState)
@@ -100,50 +207,131 @@ class MainActivity:ComponentActivity(){
 enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
 
 @Composable fun SalyantApp(){
-    var screen by remember{mutableStateOf(Screen.DASHBOARD)}
+    val context=LocalContext.current
+    var screen by rememberSaveable{mutableStateOf(Screen.DASHBOARD)}
     var selected by remember{mutableStateOf<Account?>(null)}
     var connected by remember{mutableStateOf(false)}
-    LaunchedEffect(Unit){connected=SalyantApi.health().ok}
-    MaterialTheme(colorScheme=darkColorScheme(background=Bg,surface=GlassSolid,primary=Accent,secondary=Accent2,onBackground=TextMain,onSurface=TextMain,error=Danger)){
+    var lastCheck by remember{mutableStateOf("")}
+    var appearance by remember{mutableStateOf(SettingsStore.appearance(context))}
+    var autoRefresh by remember{mutableStateOf(SettingsStore.autoRefresh(context))}
+    val systemDark=androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark=when(appearance){
+        Appearance.SYSTEM->systemDark
+        Appearance.DARK_GLASS->true
+        Appearance.LIGHT_GLASS->false
+    }
+    LaunchedEffect(appearance,systemDark){PaletteState.value=if(isDark)DarkPalette else LightPalette}
+    LaunchedEffect(Unit){
+        SalyantApi.setBaseUrl(SettingsStore.n8nBase(context))
+        if(SettingsStore.backgroundMonitor(context))SalyantMonitorWorker.schedule(context)
+    }
+    LaunchedEffect(autoRefresh){
+        while(autoRefresh){
+            val h=SalyantApi.health()
+            connected=h.ok
+            HealthHistory.record(context,h.ok)
+            lastCheck=if(h.ok)"Just now" else h.message
+            delay(30000)
+        }
+    }
+    androidx.compose.runtime.SideEffect{
+        (context as? MainActivity)?.window?.statusBarColor=Bg.toArgb()
+        (context as? MainActivity)?.window?.navigationBarColor=Bg2.toArgb()
+    }
+    val scheme=if(isDark)
+        darkColorScheme(background=Bg,surface=GlassSolid,primary=Accent,secondary=Accent2,onBackground=TextMain,onSurface=TextMain,error=Danger)
+    else
+        lightColorScheme(background=Bg,surface=GlassSolid,primary=Accent,secondary=Accent2,onBackground=TextMain,onSurface=TextMain,error=Danger)
+    MaterialTheme(colorScheme=scheme){
         CompositionLocalProvider(LocalContentColor provides TextMain){
-        Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0x222B35A8),Bg),radius=900f))){
-            Scaffold(containerColor=Color.Transparent,contentWindowInsets=WindowInsets(0,0,0,0),
-                topBar={TopBar(connected){screen=Screen.SETTINGS}},
-                bottomBar={GlassNav(screen){screen=it}}){pad->
-                Box(Modifier.padding(pad).fillMaxSize()){
-                    when(screen){
-                        Screen.DASHBOARD->Dashboard(connected){screen=it}
-                        Screen.ACCOUNTS->Accounts{selected=it;screen=Screen.INBOX}
-                        Screen.INBOX->Inbox(selected)
-                        Screen.OPS->Ops()
-                        Screen.CHAT->Chat()
-                        Screen.SETTINGS->Settings()
+            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Accent.copy(alpha=if(isDark).14f else .08f),Bg),radius=1000f))){
+                Scaffold(
+                    containerColor=Color.Transparent,
+                    contentWindowInsets=WindowInsets(0,0,0,0),
+                    topBar={TopBar(connected,lastCheck){screen=Screen.SETTINGS}},
+                    bottomBar={GlassNav(screen){screen=it}}
+                ){pad->
+                    Box(Modifier.padding(pad).fillMaxSize()){
+                        androidx.compose.animation.AnimatedContent(
+                            targetState=screen,
+                            label="screen_transition"
+                        ){destination->
+                            when(destination){
+                                Screen.DASHBOARD->Dashboard(connected,lastCheck){screen=it}
+                                Screen.ACCOUNTS->Accounts{selected=it;screen=Screen.INBOX}
+                                Screen.INBOX->Inbox(selected)
+                                Screen.OPS->Ops(connected,autoRefresh){autoRefresh=it;SettingsStore.saveAutoRefresh(context,it)}
+                                Screen.CHAT->Chat()
+                                Screen.SETTINGS->Settings(
+                                    appearance,
+                                    onAppearance={appearance=it;SettingsStore.saveAppearance(context,it)},
+                                    autoRefresh,
+                                    onAutoRefresh={autoRefresh=it;SettingsStore.saveAutoRefresh(context,it)}
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable fun TopBar(connected:Boolean,lastCheck:String,onSettings:()->Unit){
+    Row(
+        Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars)
+            .heightIn(min=78.dp).padding(horizontal=18.dp,vertical=8.dp),
+        verticalAlignment=Alignment.CenterVertically
+    ){
+        Box(Modifier.width(118.dp).height(44.dp),contentAlignment=Alignment.CenterStart){
+            Image(
+                painterResource(co.uk.salyant.sdr.R.drawable.salyant_logo),
+                "SALYANT",
+                Modifier.width(116.dp).height(28.dp),
+                contentScale=ContentScale.Fit
+            )
+        }
+        Box(Modifier.width(1.dp).height(36.dp).background(BorderStrong))
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)){
+            Text("SDR COMMAND",fontSize=11.sp,color=Muted,letterSpacing=1.9.sp,fontWeight=FontWeight.Medium)
+            Text("Autonomous AI SDR",fontSize=10.5.sp,color=Muted2)
+        }
+        Spacer(Modifier.width(8.dp))
+        LiveStatus(connected,lastCheck)
+        Spacer(Modifier.width(8.dp))
+        IconButton(
+            onClick=onSettings,
+            modifier=Modifier.size(46.dp).background(GlassStrong,RoundedCornerShape(16.dp))
+                .border(1.dp,Border,RoundedCornerShape(16.dp))
+        ){
+            Icon(Icons.Default.Settings,"Settings",tint=TextMain,modifier=Modifier.size(20.dp))
         }
     }
 }
 
-@Composable fun TopBar(connected:Boolean,onSettings:()->Unit){
-    Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal=22.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically){
-        Image(painterResource(co.uk.salyant.sdr.R.drawable.salyant_logo),null,Modifier.width(92.dp).height(50.dp),contentScale=ContentScale.Fit)
-        Spacer(Modifier.width(10.dp))
-        Box(Modifier.width(1.dp).height(30.dp).background(BorderStrong))
-        Spacer(Modifier.width(11.dp))
-        Column(Modifier.weight(1f)){
-            Text("SDR COMMAND",fontSize=11.sp,color=Muted,letterSpacing=1.8.sp,fontWeight=FontWeight.Medium)
-            Text("Autonomous AI SDR",fontSize=10.sp,color=Muted2)
-        }
-        GlassPill{
-            Box(Modifier.size(7.dp).background(if(connected)Accent2 else Danger,CircleShape))
+@Composable fun LiveStatus(connected:Boolean,lastCheck:String){
+    val transition=rememberInfiniteTransition(label="live_pulse")
+    val pulse by transition.animateFloat(
+        initialValue=.45f,targetValue=1f,
+        animationSpec=infiniteRepeatable(tween(1200),androidx.compose.animation.core.RepeatMode.Reverse),
+        label="pulse"
+    )
+    Surface(
+        color=GlassStrong,
+        shape=RoundedCornerShape(18.dp),
+        border=BorderStroke(1.dp,if(connected)Accent2.copy(alpha=.35f) else Danger.copy(alpha=.35f))
+    ){
+        Row(Modifier.padding(horizontal=11.dp,vertical=7.dp),verticalAlignment=Alignment.CenterVertically){
+            Box(Modifier.size(12.dp),contentAlignment=Alignment.Center){
+                Box(Modifier.size(12.dp).border(1.dp,(if(connected)Accent2 else Danger).copy(alpha=pulse),CircleShape))
+                Box(Modifier.size(6.dp).background(if(connected)Accent2 else Danger,CircleShape))
+            }
             Spacer(Modifier.width(7.dp))
-            Text(if(connected)"LIVE" else "OFFLINE",fontSize=10.sp,color=Muted)
-        }
-        Spacer(Modifier.width(6.dp))
-        IconButton(onClick=onSettings,modifier=Modifier.size(38.dp).background(Glass,RoundedCornerShape(12.dp)).border(1.dp,Border,RoundedCornerShape(12.dp))){
-            Icon(Icons.Default.Settings,null,tint=Muted,modifier=Modifier.size(18.dp))
+            Column{
+                Text(if(connected)"LIVE" else "OFFLINE",fontSize=9.5.sp,color=if(connected)Accent2 else Danger,fontWeight=FontWeight.Bold)
+                Text(if(connected)"backend reachable" else "backend unavailable",fontSize=7.sp,color=Muted2,maxLines=1)
+            }
         }
     }
 }
@@ -153,26 +341,38 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
 }
 
 @Composable fun GlassCard(modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit){
-    Card(modifier,shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Glass),border=BorderStroke(1.dp,Border)){
+    val shape=RoundedCornerShape(22.dp)
+    Box(modifier.clip(shape).background(Brush.linearGradient(listOf(GlassStrong,Glass,Glass.copy(alpha=.72f))))
+        .border(1.dp,Border,shape).animateContentSize()){
         Column(Modifier.padding(16.dp),content=content)
     }
 }
 @Composable fun GlassNav(screen:Screen,onSelect:(Screen)->Unit){
-    Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).background(Bg2.copy(alpha=.97f)).border(1.dp,Border).padding(horizontal=6.dp,vertical=3.dp),horizontalArrangement=Arrangement.SpaceEvenly){
-        val items=listOf(
-            Screen.DASHBOARD to Pair(Icons.Default.Dashboard,"Dashboard"),
-            Screen.ACCOUNTS to Pair(Icons.Default.People,"Accounts"),
-            Screen.INBOX to Pair(Icons.Default.Mail,"Inbox"),
-            Screen.OPS to Pair(Icons.Default.Tune,"Ops"),
-            Screen.CHAT to Pair(Icons.Default.AutoAwesome,"AI Director")
-        )
-        items.forEach{(s,p)->
-            val active=screen==s
-            Column(Modifier.weight(1f).clickable{onSelect(s)}.padding(vertical=1.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                Box(Modifier.size(34.dp).background(if(active)Accent.copy(alpha=.22f) else Color.Transparent,CircleShape),contentAlignment=Alignment.Center){
-                    Icon(p.first,null,tint=if(active)Accent2 else Muted,modifier=Modifier.size(20.dp))
+    Box(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(start=12.dp,end=12.dp,bottom=9.dp)){
+        Row(
+            Modifier.fillMaxWidth().height(72.dp)
+                .background(Brush.verticalGradient(listOf(GlassStrong,Glass)),RoundedCornerShape(30.dp))
+                .border(1.dp,BorderStrong,RoundedCornerShape(30.dp))
+                .padding(horizontal=6.dp,vertical=5.dp),
+            horizontalArrangement=Arrangement.SpaceEvenly,
+            verticalAlignment=Alignment.CenterVertically
+        ){
+            val items=listOf(
+                Screen.DASHBOARD to Pair(Icons.Default.Dashboard,"Dashboard"),
+                Screen.ACCOUNTS to Pair(Icons.Default.Groups,"Accounts"),
+                Screen.INBOX to Pair(Icons.Default.MailOutline,"Inbox"),
+                Screen.OPS to Pair(Icons.Default.Tune,"Ops"),
+                Screen.CHAT to Pair(Icons.Default.Psychology,"AI Director")
+            )
+            items.forEach{(s,p)->
+                val active=screen==s
+                val size by androidx.compose.animation.core.animateDpAsState(if(active)40.dp else 34.dp,tween(220),label="nav_size")
+                Column(Modifier.weight(1f).fillMaxHeight().clickable{onSelect(s)},horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+                    Box(Modifier.size(size).background(if(active)Accent.copy(alpha=.20f) else Color.Transparent,CircleShape),contentAlignment=Alignment.Center){
+                        Icon(p.first,p.second,tint=if(active)Accent2 else Muted,modifier=Modifier.size(20.dp))
+                    }
+                    Text(p.second,fontSize=8.sp,color=if(active)Accent2 else Muted,fontWeight=if(active)FontWeight.SemiBold else FontWeight.Normal,maxLines=1,overflow=TextOverflow.Ellipsis)
                 }
-                Text(p.second,fontSize=8.sp,color=if(active)Accent2 else Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
         }
     }
@@ -185,12 +385,13 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
     }
 }
 
-@Composable fun Dashboard(connected:Boolean,onNavigate:(Screen)->Unit){
+@Composable fun Dashboard(connected:Boolean,lastCheck:String,onNavigate:(Screen)->Unit){
+    val context=LocalContext.current
     var accounts by remember{mutableStateOf<List<Account>>(emptyList())}
     var loading by remember{mutableStateOf(true)}
     var error by remember{mutableStateOf<String?>(null)}
     LaunchedEffect(Unit){
-        runCatching{SalyantApi.accounts()}.onSuccess{accounts=it}.onFailure{error=it.message}
+        runCatching{SalyantApi.accounts()}.onSuccess{accounts=it;error=null}.onFailure{error=it.message}
         loading=false
     }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
@@ -201,36 +402,71 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
             Kpi("Unread",if(loading||!live)"—" else accounts.sumOf{it.unread}.toString(),Warn,Modifier.weight(1f))
             Kpi("Hot",if(loading||!live)"—" else accounts.sumOf{it.hot}.toString(),Accent2,Modifier.weight(1f))
         }}
-        error?.let{item{GlassCard{Text("Live data unavailable",color=Danger,fontWeight=FontWeight.Bold);Text(it,fontSize=11.sp,color=Muted,modifier=Modifier.padding(top=5.dp));Text("The UI remains usable; backend data will appear when the SDR API is healthy.",fontSize=11.sp,color=Muted,modifier=Modifier.padding(top=5.dp))}}}
-        item{GlassCard{Text("PIPELINE",fontSize=11.sp,color=Muted,fontWeight=FontWeight.Bold,letterSpacing=1.2.sp);Spacer(Modifier.height(16.dp));Pipeline()}}
+        error?.let{item{GlassCard{
+            Row(verticalAlignment=Alignment.CenterVertically){
+                Box(Modifier.size(8.dp).background(Danger,CircleShape))
+                Spacer(Modifier.width(8.dp))
+                Text("Live data unavailable",color=Danger,fontWeight=FontWeight.Bold)
+            }
+            Text(it,fontSize=11.sp,color=Muted,modifier=Modifier.padding(top=7.dp))
+            Text("No mailbox metric is fabricated while the API is unhealthy.",fontSize=11.sp,color=Muted,modifier=Modifier.padding(top=5.dp))
+        }}}
         item{GlassCard{
-            Row(verticalAlignment=Alignment.CenterVertically){Text("Backend",fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));Text(if(connected)"Reachable" else "Unavailable",color=if(connected)Accent2 else Danger,fontSize=12.sp)}
-            Text("Android → n8n → Zoho / AI Router",fontSize=12.sp,color=Muted,modifier=Modifier.padding(top=8.dp))
+            Row(verticalAlignment=Alignment.CenterVertically){
+                Column(Modifier.weight(1f)){
+                    Text("SDR control surface",fontSize=15.sp,fontWeight=FontWeight.Bold)
+                    Text("Explicit server-side stages — no guessed completion state",fontSize=10.sp,color=Muted)
+                }
+                StatusPill(if(connected)"LIVE" else "CHECK",connected)
+            }
+            Spacer(Modifier.height(10.dp))
+            ControlRow("Discovery & qualification","Server workflow")
+            ControlRow("Reachability verification","Before drafting")
+            ControlRow("Guardrailed drafting","AI + policy gate")
+            ControlRow("Human approval","Approval gate")
+            ControlRow("Throttled dispatch","Server worker")
+            ControlRow("Reply intelligence & recovery","Inbox orchestration")
         }}
-        item{Button(onClick={onNavigate(Screen.ACCOUNTS)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(15.dp),colors=ButtonDefaults.buttonColors(containerColor=Accent)){Text("Open SDR Accounts",color=TextMain)}}
-        item{OutlinedButton(onClick={onNavigate(Screen.CHAT)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(15.dp),border=BorderStroke(1.dp,BorderStrong)){Text("Ask SDR AI Director",color=TextMain)}}
-        item{Spacer(Modifier.height(8.dp))}
-    }
-}
-@Composable fun Kpi(label:String,value:String,color:Color,modifier:Modifier){
-    GlassCard(modifier){
-        Text(value,fontSize=25.sp,fontWeight=FontWeight.Bold)
-        Text(label,fontSize=11.sp,color=Muted,modifier=Modifier.padding(top=2.dp))
-        Box(Modifier.padding(top=8.dp).size(6.dp).background(color,CircleShape))
+        item{GlassCard{
+            Row(verticalAlignment=Alignment.CenterVertically){
+                Column(Modifier.weight(1f)){
+                    Text("Backend",fontSize=16.sp,fontWeight=FontWeight.Bold)
+                    Text("Android → n8n → Zoho / AI Router",fontSize=12.sp,color=Muted)
+                }
+                Text(if(connected)"Reachable" else "Unavailable",color=if(connected)Accent2 else Danger,fontSize=11.sp,fontWeight=FontWeight.SemiBold)
+            }
+            Text(if(lastCheck.isBlank())"Checking the live control endpoint…" else "Last check: "+lastCheck,fontSize=10.sp,color=Muted2,modifier=Modifier.padding(top=8.dp))
+        }}
+        item{Button(onClick={onNavigate(Screen.ACCOUNTS)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(17.dp),colors=ButtonDefaults.buttonColors(containerColor=Accent)){Text("Open SDR Accounts",color=TextMain,fontWeight=FontWeight.SemiBold)}}
+        item{OutlinedButton(onClick={onNavigate(Screen.CHAT)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(17.dp),border=BorderStroke(1.dp,BorderStrong)){Text("Ask SDR AI Director",color=TextMain,fontWeight=FontWeight.SemiBold)}}
     }
 }
 
-@Composable fun Pipeline(){
-    val stages=listOf("Discover","Reachability","Draft","Review","Send")
-    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
-        stages.forEachIndexed{i,s->
-            Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.weight(1f)){
-                Box(Modifier.size(37.dp).background(if(i<3)Accent else Color(0xFF262A36),CircleShape).border(1.dp,if(i<3)Accent else BorderStrong,CircleShape),contentAlignment=Alignment.Center){Text((i+1).toString(),fontWeight=FontWeight.Bold,color=TextMain)}
-                Text(s,fontSize=9.sp,color=Muted,modifier=Modifier.padding(top=7.dp),maxLines=1)
-            }
+@Composable fun Kpi(label:String,value:String,color:Color,modifier:Modifier){
+    GlassCard(modifier.height(102.dp)){
+        Text(value,fontSize=27.sp,fontWeight=FontWeight.Bold,color=TextMain)
+        Text(label,fontSize=11.sp,color=Muted,modifier=Modifier.padding(top=3.dp))
+        Spacer(Modifier.height(9.dp))
+        Box(Modifier.size(7.dp).background(color,CircleShape))
+    }
+}
+
+@Composable fun ControlRow(title:String,detail:String){
+    Row(Modifier.fillMaxWidth().padding(vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
+        Box(Modifier.size(8.dp).background(Accent2,CircleShape))
+        Column(Modifier.padding(start=10.dp).weight(1f)){
+            Text(title,fontSize=11.5.sp)
+            Text(detail,fontSize=9.sp,color=Muted2)
         }
     }
 }
+
+@Composable fun StatusPill(label:String,good:Boolean){
+    Surface(color=if(good)Accent2.copy(alpha=.10f) else Danger.copy(alpha=.10f),shape=RoundedCornerShape(20.dp),border=BorderStroke(1.dp,if(good)Accent2.copy(alpha=.35f) else Danger.copy(alpha=.35f))){
+        Text(label,fontSize=8.sp,color=if(good)Accent2 else Danger,fontWeight=FontWeight.Bold,modifier=Modifier.padding(horizontal=9.dp,vertical=6.dp))
+    }
+}
+
 
 @Composable fun Accounts(onSelect:(Account)->Unit){
     var accounts by remember{mutableStateOf<List<Account>>(emptyList())}
@@ -370,116 +606,289 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
     }
 }
 
-@Composable fun Ops(){
-    var health by remember{mutableStateOf<Health?>(null)}
-    LaunchedEffect(Unit){health=SalyantApi.health()}
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-        item{Header("Ops Center","Workflow health, deliverability, CRM sync and team notes — in one place.")}
-        item{ConnectorCard("n8n Workflow Engine","Production workflow orchestration","https://n8n.salyant.co.uk",health?.ok==true,"Connected to SDR webhook")}
-        item{ConnectorCard("Zoho Mail","Mailbox provider","Managed through n8n",null,"Credentials remain server-side")}
-        item{ConnectorCard("AI Router","Model gateway","Managed through n8n",null,"Provider keys never ship in the APK")}
-        item{ConnectorCard("CRM","Bitrix24 / configurable","Optional connector",null,"Configure from Settings")}
-        item{GlassCard{
-            Text("Workflow stages",fontWeight=FontWeight.Bold)
-            listOf("Discovery","Reachability","Guardrailed drafting","Human review","Throttled dispatch","Reply intelligence").forEachIndexed{i,s->
-                Row(Modifier.fillMaxWidth().padding(top=10.dp),verticalAlignment=Alignment.CenterVertically){
-                    Box(Modifier.size(7.dp).background(if(i<3)Accent2 else Muted2,CircleShape));Text(s,fontSize=11.sp,color=Muted,modifier=Modifier.padding(start=9.dp))
-                }
-            }
-        }}
-    }
-}
+@Composable fun Ops(currentConnected:Boolean,currentAutoRefresh:Boolean,onAutoRefresh:(Boolean)->Unit){
+    val context=LocalContext.current
+    var backgroundMonitor by remember{mutableStateOf(SettingsStore.backgroundMonitor(context))}
+    var history by remember{mutableStateOf(HealthHistory.read(context))}
 
-@Composable fun ConnectorCard(title:String,sub:String,value:String,ok:Boolean?,detail:String){
-    GlassCard(Modifier.fillMaxWidth()){
-        Row(verticalAlignment=Alignment.CenterVertically){
-            Box(Modifier.size(42.dp).background(GlassStrong,RoundedCornerShape(12.dp)),contentAlignment=Alignment.Center){
-                Icon(if(title=="n8n Workflow Engine")Icons.Default.AccountTree else Icons.Default.Extension,null,tint=if(ok==true)Accent2 else Muted)
-            }
-            Column(Modifier.weight(1f).padding(start=12.dp)){
-                Text(title,fontWeight=FontWeight.SemiBold,fontSize=14.sp)
-                Text(sub,fontSize=10.5.sp,color=Muted,modifier=Modifier.padding(top=2.dp))
-                Text(value,fontSize=10.sp,color=Muted2,modifier=Modifier.padding(top=5.dp))
-            }
-            if(ok!=null)Text(if(ok)"LIVE" else "CHECK",fontSize=9.sp,color=if(ok)Accent2 else Warn,fontWeight=FontWeight.Bold)
+    LaunchedEffect(Unit){
+        while(true){
+            history=HealthHistory.read(context)
+            delay(15000)
         }
-        Text(detail,fontSize=10.5.sp,color=Muted,modifier=Modifier.padding(top=12.dp))
     }
-}
-@Composable fun Settings(){
-    var notifications by remember{mutableStateOf(true)}
-    var compact by remember{mutableStateOf(false)}
-    var n8n by remember{mutableStateOf("https://n8n.salyant.co.uk")}
-    var deliv by remember{mutableStateOf("")}
-    var crm by remember{mutableStateOf("")}
+
     LazyColumn(Modifier.fillMaxSize().padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
-        item{Header("Settings","Connections, notifications, security and product configuration")}
+        item{Header("Ops Center","Operational controls, live connector posture and persistent monitoring — not decorative status cards.")}
+
         item{GlassCard{
-            Text("Appearance",fontWeight=FontWeight.Bold)
-            Row(Modifier.fillMaxWidth().padding(top=12.dp),verticalAlignment=Alignment.CenterVertically){
-                Column(Modifier.weight(1f)){Text("Salyant dark glass",fontSize=12.sp);Text("Matches salyant.co.uk SDR Command",fontSize=10.sp,color=Muted)}
-                Text("DEFAULT",fontSize=9.sp,color=Accent2,fontWeight=FontWeight.Bold)
+            Row(verticalAlignment=Alignment.CenterVertically){
+                Column(Modifier.weight(1f)){
+                    Text("Live system posture",fontSize=16.sp,fontWeight=FontWeight.Bold)
+                    Text("Core workflows remain server-side on n8n.",fontSize=10.5.sp,color=Muted)
+                }
+                StatusPill(if(currentConnected)"LIVE" else "CHECK",currentConnected)
+            }
+            Spacer(Modifier.height(11.dp))
+            ConnectorLine("n8n workflow engine",if(currentConnected)"REACHABLE" else "UNAVAILABLE",currentConnected)
+            ConnectorLine("Zoho Mail","SERVER-SIDE",false)
+            ConnectorLine("AI Router","SERVER-SIDE",false)
+            ConnectorLine("CRM","OPTIONAL",false)
+        }}
+
+        item{GlassCard{
+            Text("Command controls",fontSize=16.sp,fontWeight=FontWeight.Bold)
+            Text("These switches affect actual Android runtime behaviour.",fontSize=10.5.sp,color=Muted,modifier=Modifier.padding(top=3.dp))
+            SettingSwitch(
+                "Background health monitor",
+                "WorkManager check every 15 minutes; survives app closure",
+                backgroundMonitor
+            ){
+                backgroundMonitor=it
+                SettingsStore.saveBackgroundMonitor(context,it)
+                SalyantMonitorWorker.setEnabled(context,it)
+            }
+            SettingSwitch(
+                "Live refresh while open",
+                "Refresh backend posture every 30 seconds",
+                currentAutoRefresh
+            ){onAutoRefresh(it)}
+        }}
+
+        item{GlassCard{
+            Row(verticalAlignment=Alignment.CenterVertically){
+                Column(Modifier.weight(1f)){
+                    Text("Recent monitor history",fontSize=16.sp,fontWeight=FontWeight.Bold)
+                    Text("Persisted Android health checks",fontSize=10.5.sp,color=Muted)
+                }
+                Text(history.size.toString()+" checks",fontSize=9.sp,color=Muted2)
+            }
+            Spacer(Modifier.height(11.dp))
+            MiniHealthChart(history)
+            Spacer(Modifier.height(9.dp))
+            Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                Insight("Healthy",history.count{it}.toString(),Accent2,Modifier.weight(1f))
+                Insight("Failed",history.count{!it}.toString(),Danger,Modifier.weight(1f))
+                Insight("Current",if(history.lastOrNull()==true)"LIVE" else if(history.isEmpty())"—" else "CHECK",Accent,Modifier.weight(1f))
             }
         }}
-        item{GlassCard{
-            Text("Notifications",fontWeight=FontWeight.Bold)
-            SettingSwitch("Operational alerts","Reachability, drafting, replies and failures",notifications){notifications=it}
-            SettingSwitch("Compact density","Tighter lists for high-volume SDR work",compact){compact=it}
-        }}
-        item{GlassCard{
-            Text("Data sources & connectors",fontWeight=FontWeight.Bold)
-            Text("These values are local configuration only. Provider credentials stay server-side.",fontSize=10.5.sp,color=Muted,modifier=Modifier.padding(top=4.dp,bottom=10.dp))
-            ConnectorField("n8n base URL",n8n){n8n=it}
-            ConnectorField("Deliverability webhook",deliv){deliv=it}
-            ConnectorField("CRM webhook / base",crm){crm=it}
-            Text("Connectors",fontSize=10.sp,color=Muted2,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=12.dp,bottom=6.dp))
-            ConnectorLine("n8n workflow engine","Required",true)
-            ConnectorLine("Zoho Mail","Server-side",false)
-            ConnectorLine("AI Router","Server-side",false)
-            ConnectorLine("Bitrix24 / CRM","Optional",crm.isNotBlank())
-        }}
-        item{GlassCard{
-            Text("Security",fontWeight=FontWeight.Bold)
-            Text("No Zoho passwords, n8n API keys or AI provider secrets are embedded in this APK.",fontSize=11.sp,color=Accent2,modifier=Modifier.padding(top=7.dp))
-            Text("Customer release requires tenant authentication, role-based access, server-side connector isolation, audit logging and billing entitlements.",fontSize=10.5.sp,color=Muted,modifier=Modifier.padding(top=7.dp))
-        }}
-        item{GlassCard{
-            Text("About SALYANT SDR",fontWeight=FontWeight.Bold)
-            Text("Native Android command centre for the SALYANT Autonomous AI SDR.",fontSize=11.sp,color=Muted,modifier=Modifier.padding(top=6.dp))
-            Text("Version 0.1.2 · Release channel",fontSize=10.sp,color=Muted2,modifier=Modifier.padding(top=5.dp))
-        }}
-        item{Spacer(Modifier.height(10.dp))}
-    }
-}
 
-@Composable fun SettingSwitch(title:String,sub:String,value:Boolean,onChange:(Boolean)->Unit){
-    Row(Modifier.fillMaxWidth().padding(top=12.dp),verticalAlignment=Alignment.CenterVertically){
-        Column(Modifier.weight(1f)){Text(title,fontSize=12.sp);Text(sub,fontSize=10.sp,color=Muted)}
-        Switch(checked=value,onCheckedChange=onChange,colors=SwitchDefaults.colors(checkedThumbColor=TextMain,checkedTrackColor=Accent))
+        item{GlassCard{
+            Text("Server workflow posture",fontSize=16.sp,fontWeight=FontWeight.Bold)
+            Text("Android does not run the SDR engine, so killing the app process does not stop discovery, drafting, approval or dispatch.",fontSize=10.5.sp,color=Muted,modifier=Modifier.padding(top=4.dp,bottom=8.dp))
+            WorkflowRow("Discovery & qualification","Server-side")
+            WorkflowRow("Reachability verification","Before drafting")
+            WorkflowRow("Guardrailed drafting","AI + policy")
+            WorkflowRow("Human approval","Approval gate")
+            WorkflowRow("Throttled dispatch & recovery","Server worker")
+            WorkflowRow("Reply intelligence","Inbox orchestration")
+        }}
     }
-}
-
-@Composable fun ConnectorField(label:String,value:String,onChange:(String)->Unit){
-    OutlinedTextField(value,onChange,modifier=Modifier.fillMaxWidth().padding(top=7.dp),label={Text(label,fontSize=10.sp)},singleLine=true,shape=RoundedCornerShape(11.dp),colors=OutlinedTextFieldDefaults.colors(focusedBorderColor=Accent,unfocusedBorderColor=BorderStrong))
 }
 
 @Composable fun ConnectorLine(title:String,state:String,connected:Boolean){
     Row(Modifier.fillMaxWidth().padding(vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
-        Box(Modifier.size(7.dp).background(if(connected)Accent2 else Muted2,CircleShape))
-        Text(title,fontSize=11.sp,modifier=Modifier.padding(start=9.dp).weight(1f))
-        Text(state,fontSize=9.sp,color=if(connected)Accent2 else Muted2)
+        Box(Modifier.size(8.dp).background(if(connected)Accent2 else Muted2,CircleShape))
+        Text(title,fontSize=11.5.sp,modifier=Modifier.padding(start=9.dp).weight(1f))
+        Text(state,fontSize=8.5.sp,color=if(connected)Accent2 else Muted2,fontWeight=FontWeight.SemiBold)
     }
 }
 
-@Composable fun SettingsDialog(onClose:()->Unit){
-    Dialog(onDismissRequest=onClose){
-        GlassCard(Modifier.fillMaxWidth().padding(10.dp)){
-            Row(verticalAlignment=Alignment.CenterVertically){
-                Text("Settings",fontSize=18.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f))
-                IconButton(onClick=onClose){Icon(Icons.Default.Close,null,tint=Muted)}
-            }
-            Text("Use the Settings tab for connectors, notifications, security and product configuration.",fontSize=11.sp,color=Muted,modifier=Modifier.padding(top=6.dp))
-            Button(onClick=onClose,modifier=Modifier.fillMaxWidth().padding(top=14.dp),shape=RoundedCornerShape(12.dp)){Text("Open from navigation")}
+@Composable fun WorkflowRow(title:String,state:String){
+    Row(Modifier.fillMaxWidth().padding(vertical=5.dp),verticalAlignment=Alignment.CenterVertically){
+        Icon(Icons.Default.AccountTree,null,tint=Accent2,modifier=Modifier.size(16.dp))
+        Text(title,fontSize=11.sp,modifier=Modifier.padding(start=8.dp).weight(1f))
+        Surface(color=GlassStrong,shape=RoundedCornerShape(14.dp),border=BorderStroke(1.dp,Border)){
+            Text(state,fontSize=8.sp,color=Muted,modifier=Modifier.padding(horizontal=8.dp,vertical=5.dp))
         }
     }
+}
+
+@Composable fun MiniHealthChart(history:List<Boolean>){
+    if(history.isEmpty()){
+        Surface(color=GlassStrong,shape=RoundedCornerShape(15.dp),border=BorderStroke(1.dp,Border)){
+            Row(Modifier.fillMaxWidth().height(82.dp),horizontalArrangement=Arrangement.Center,verticalAlignment=Alignment.CenterVertically){
+                Text("No monitor history yet — the chart will build automatically.",fontSize=10.5.sp,color=Muted,textAlign=TextAlign.Center,modifier=Modifier.padding(horizontal=18.dp))
+            }
+        }
+        return
+    }
+    Canvas(Modifier.fillMaxWidth().height(94.dp).clip(RoundedCornerShape(16.dp)).background(GlassStrong)){
+        val left=18f
+        val right=size.width-18f
+        val top=17f
+        val bottom=size.height-17f
+        val step=if(history.size<2)0f else (right-left)/(history.size-1)
+        history.forEachIndexed{i,ok->
+            if(i>0){
+                val prev=history[i-1]
+                drawLine(
+                    if(ok&&prev)Accent2 else if(!ok&&!prev)Danger else Accent,
+                    Offset(left+step*(i-1),if(prev)top else bottom),
+                    Offset(left+step*i,if(ok)top else bottom),
+                    strokeWidth=5f,cap=StrokeCap.Round
+                )
+            }
+            drawCircle(if(ok)Accent2 else Danger,4.5f,Offset(left+step*i,if(ok)top else bottom))
+        }
+    }
+}
+
+@Composable fun Insight(label:String,value:String,color:Color,modifier:Modifier){
+    Surface(color=GlassStrong,shape=RoundedCornerShape(14.dp),border=BorderStroke(1.dp,Border),modifier=modifier){
+        Column(Modifier.padding(vertical=9.dp),horizontalAlignment=Alignment.CenterHorizontally){
+            Text(value,fontSize=13.sp,fontWeight=FontWeight.Bold,color=color)
+            Text(label,fontSize=8.5.sp,color=Muted2)
+        }
+    }
+}
+
+@Composable fun Settings(
+    appearance:Appearance,
+    onAppearance:(Appearance)->Unit,
+    autoRefresh:Boolean,
+    onAutoRefresh:(Boolean)->Unit
+){
+    val context=LocalContext.current
+    var notifications by remember{mutableStateOf(SettingsStore.notifications(context)&&NotificationController.allowed(context))}
+    var backgroundMonitor by remember{mutableStateOf(SettingsStore.backgroundMonitor(context))}
+    var compact by remember{mutableStateOf(SettingsStore.compact(context))}
+    var n8n by remember{mutableStateOf(SettingsStore.n8nBase(context))}
+    var applied by remember{mutableStateOf(true)}
+    val permissionLauncher=rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){granted->
+        notifications=granted&&NotificationController.allowed(context)
+        SettingsStore.saveNotifications(context,notifications)
+        if(notifications)SalyantMonitorWorker.schedule(context)
+    }
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
+        item{Header("Settings","Appearance, notifications, background monitoring and connector configuration.")}
+
+        item{GlassCard{
+            Text("Appearance",fontSize=16.sp,fontWeight=FontWeight.Bold)
+            Text("Choose the visual mode independently from system dark mode.",fontSize=10.5.sp,color=Muted,modifier=Modifier.padding(top=4.dp,bottom=10.dp))
+            Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){
+                AppearanceOption("System",Appearance.SYSTEM,appearance,onAppearance,Modifier.weight(1f))
+                AppearanceOption("Dark Glass",Appearance.DARK_GLASS,appearance,onAppearance,Modifier.weight(1f))
+                AppearanceOption("Light Glass",Appearance.LIGHT_GLASS,appearance,onAppearance,Modifier.weight(1f))
+            }
+        }}
+
+        item{GlassCard{
+            Text("Notifications",fontSize=16.sp,fontWeight=FontWeight.Bold)
+            SettingSwitch(
+                "Operational alerts",
+                "Android permission for important SDR state changes",
+                notifications
+            ){
+                if(!it){
+                    notifications=false
+                    SettingsStore.saveNotifications(context,false)
+                }else if(Build.VERSION.SDK_INT>=33){
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }else{
+                    notifications=true
+                    SettingsStore.saveNotifications(context,true)
+                    SalyantMonitorWorker.schedule(context)
+                }
+            }
+            SettingSwitch(
+                "Background health monitor",
+                "Keep checking the control endpoint after the app is closed",
+                backgroundMonitor
+            ){
+                backgroundMonitor=it
+                SettingsStore.saveBackgroundMonitor(context,it)
+                SalyantMonitorWorker.setEnabled(context,it)
+            }
+            SettingSwitch(
+                "Live refresh while open",
+                "Refresh the SDR control endpoint every 30 seconds",
+                autoRefresh
+            ){onAutoRefresh(it)}
+        }}
+
+        item{GlassCard{
+            Text("Data sources & connectors",fontSize=16.sp,fontWeight=FontWeight.Bold)
+            Text("n8n can be changed for trusted environments; provider secrets remain server-side.",fontSize=10.5.sp,color=Muted,modifier=Modifier.padding(top=4.dp,bottom=6.dp))
+            ConnectorField("n8n base URL",n8n){n8n=it;applied=false}
+            Row(Modifier.fillMaxWidth().padding(top=9.dp),verticalAlignment=Alignment.CenterVertically){
+                Text(if(applied)"Client uses the saved endpoint" else "Unsaved endpoint change",fontSize=9.5.sp,color=if(applied)Accent2 else Warn,modifier=Modifier.weight(1f))
+                Button(
+                    onClick={
+                        val value=n8n.trim().trimEnd('/')
+                        if(value.startsWith("https://")){
+                            SettingsStore.saveN8nBase(context,value)
+                            SalyantApi.setBaseUrl(value)
+                            applied=true
+                        }
+                    },
+                    enabled=!applied,
+                    shape=RoundedCornerShape(12.dp),
+                    colors=ButtonDefaults.buttonColors(containerColor=Accent)
+                ){Text("Apply",fontSize=10.sp)}
+            }
+            Spacer(Modifier.height(4.dp))
+            ConnectorLine("n8n workflow engine","CLIENT",true)
+            ConnectorLine("Zoho Mail","SERVER-SIDE",false)
+            ConnectorLine("AI Router","SERVER-SIDE",false)
+            ConnectorLine("CRM","OPTIONAL",false)
+        }}
+
+        item{GlassCard{
+            Text("Security & continuity",fontSize=16.sp,fontWeight=FontWeight.Bold)
+            Text("No Zoho passwords, n8n API keys or model provider secrets are embedded in this APK.",fontSize=10.5.sp,color=Accent2,modifier=Modifier.padding(top=6.dp))
+            Text("Core SDR workflows continue on n8n when Android is closed. WorkManager only handles Android-side health monitoring and alerts.",fontSize=10.5.sp,color=Muted,modifier=Modifier.padding(top=7.dp))
+        }}
+
+        item{GlassCard{
+            Text("About SALYANT SDR",fontSize=16.sp,fontWeight=FontWeight.Bold)
+            Text("Native Android command centre for the SALYANT Autonomous AI SDR.",fontSize=10.5.sp,color=Muted,modifier=Modifier.padding(top=6.dp))
+            Text("Version 0.1.3 · UI refinement build",fontSize=9.5.sp,color=Muted2,modifier=Modifier.padding(top=5.dp))
+        }}
+    }
+}
+
+@Composable fun AppearanceOption(label:String,value:Appearance,selected:Appearance,onSelect:(Appearance)->Unit,modifier:Modifier){
+    val active=value==selected
+    Surface(
+        modifier.clickable{onSelect(value)},
+        color=if(active)Accent.copy(alpha=.15f) else GlassStrong,
+        shape=RoundedCornerShape(15.dp),
+        border=BorderStroke(1.dp,if(active)Accent.copy(alpha=.55f) else Border)
+    ){
+        Column(Modifier.padding(vertical=9.dp),horizontalAlignment=Alignment.CenterHorizontally){
+            Box(Modifier.size(22.dp).background(
+                when(value){
+                    Appearance.SYSTEM->Brush.linearGradient(listOf(DarkPalette.bg,LightPalette.bg))
+                    Appearance.DARK_GLASS->Brush.linearGradient(listOf(Color(0xFF141722),Color(0xFF30364A)))
+                    Appearance.LIGHT_GLASS->Brush.linearGradient(listOf(Color.White,Color(0xFFEAF0F8)))
+                },CircleShape
+            ).border(1.dp,if(active)Accent else Border,CircleShape))
+            Text(label,fontSize=8.5.sp,color=if(active)Accent2 else Muted,modifier=Modifier.padding(top=6.dp),maxLines=1)
+        }
+    }
+}
+
+@Composable fun SettingSwitch(title:String,sub:String,value:Boolean,onChange:(Boolean)->Unit){
+    Row(Modifier.fillMaxWidth().padding(top=13.dp),verticalAlignment=Alignment.CenterVertically){
+        Column(Modifier.weight(1f).padding(end=12.dp)){
+            Text(title,fontSize=11.5.sp,fontWeight=FontWeight.Medium)
+            Text(sub,fontSize=9.5.sp,color=Muted)
+        }
+        Switch(checked=value,onCheckedChange=onChange,colors=SwitchDefaults.colors(
+            checkedThumbColor=TextMain,checkedTrackColor=Accent,
+            uncheckedThumbColor=Muted,uncheckedTrackColor=GlassStrong
+        ))
+    }
+}
+
+@Composable fun ConnectorField(label:String,value:String,onChange:(String)->Unit){
+    OutlinedTextField(
+        value,onChange,modifier=Modifier.fillMaxWidth().padding(top=7.dp),
+        label={Text(label,fontSize=10.sp)},singleLine=true,shape=RoundedCornerShape(12.dp),
+        colors=OutlinedTextFieldDefaults.colors(
+            focusedBorderColor=Accent,unfocusedBorderColor=BorderStrong,
+            focusedContainerColor=GlassStrong,unfocusedContainerColor=Glass
+        )
+    )
 }

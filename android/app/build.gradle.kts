@@ -12,8 +12,8 @@ android {
         applicationId = "co.uk.salyant.sdr"
         minSdk = 26
         targetSdk = 37
-        versionCode = 4
-        versionName = "0.1.2"
+        versionCode = 5
+        versionName = "0.1.3"
     }
 
     val signingPropertiesFile = rootProject.file("keystore.properties")
@@ -55,5 +55,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.10.2")
+    implementation("androidx.work:work-runtime-ktx:2.11.0")
+    implementation("androidx.core:core-ktx:1.17.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
