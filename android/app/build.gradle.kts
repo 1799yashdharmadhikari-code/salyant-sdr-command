@@ -12,8 +12,8 @@ android {
         applicationId = "co.uk.salyant.sdr"
         minSdk = 26
         targetSdk = 37
-        versionCode = 2
-        versionName = "0.1.0"
+        versionCode = 3
+        versionName = "0.1.1"
     }
 
     val signingPropertiesFile = rootProject.file("keystore.properties")
