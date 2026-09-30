@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,12 +103,12 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
     var screen by remember{mutableStateOf(Screen.DASHBOARD)}
     var selected by remember{mutableStateOf<Account?>(null)}
     var connected by remember{mutableStateOf(false)}
-    var settingsOpen by remember{mutableStateOf(false)}
     LaunchedEffect(Unit){connected=SalyantApi.health().ok}
     MaterialTheme(colorScheme=darkColorScheme(background=Bg,surface=GlassSolid,primary=Accent,secondary=Accent2,onBackground=TextMain,onSurface=TextMain,error=Danger)){
+        CompositionLocalProvider(LocalContentColor provides TextMain){
         Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0x222B35A8),Bg),radius=900f))){
             Scaffold(containerColor=Color.Transparent,contentWindowInsets=WindowInsets(0,0,0,0),
-                topBar={TopBar(connected){settingsOpen=true}},
+                topBar={TopBar(connected){screen=Screen.SETTINGS}},
                 bottomBar={GlassNav(screen){screen=it}}){pad->
                 Box(Modifier.padding(pad).fillMaxSize()){
                     when(screen){
@@ -120,7 +121,7 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
                     }
                 }
             }
-            if(settingsOpen) SettingsDialog{settingsOpen=false}
+        }
         }
     }
 }
@@ -152,10 +153,12 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
 }
 
 @Composable fun GlassCard(modifier:Modifier=Modifier,content:@Composable ColumnScope.()->Unit){
-    Card(modifier,shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Glass),border=BorderStroke(1.dp,Border),content=content)
+    Card(modifier,shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Glass),border=BorderStroke(1.dp,Border)){
+        Column(Modifier.padding(16.dp),content=content)
+    }
 }
 @Composable fun GlassNav(screen:Screen,onSelect:(Screen)->Unit){
-    Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).background(Bg2.copy(alpha=.97f)).border(1.dp,Border).padding(horizontal=6.dp,vertical=7.dp),horizontalArrangement=Arrangement.SpaceEvenly){
+    Row(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).background(Bg2.copy(alpha=.97f)).border(1.dp,Border).padding(horizontal=6.dp,vertical=3.dp),horizontalArrangement=Arrangement.SpaceEvenly){
         val items=listOf(
             Screen.DASHBOARD to Pair(Icons.Default.Dashboard,"Dashboard"),
             Screen.ACCOUNTS to Pair(Icons.Default.People,"Accounts"),
@@ -166,10 +169,10 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
         items.forEach{(s,p)->
             val active=screen==s
             Column(Modifier.weight(1f).clickable{onSelect(s)}.padding(vertical=1.dp),horizontalAlignment=Alignment.CenterHorizontally){
-                Box(Modifier.size(38.dp).background(if(active)Accent.copy(alpha=.22f) else Color.Transparent,CircleShape),contentAlignment=Alignment.Center){
-                    Icon(p.first,null,tint=if(active)Accent2 else Muted,modifier=Modifier.size(21.dp))
+                Box(Modifier.size(34.dp).background(if(active)Accent.copy(alpha=.22f) else Color.Transparent,CircleShape),contentAlignment=Alignment.Center){
+                    Icon(p.first,null,tint=if(active)Accent2 else Muted,modifier=Modifier.size(20.dp))
                 }
-                Text(p.second,fontSize=8.5.sp,color=if(active)Accent2 else Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
+                Text(p.second,fontSize=8.sp,color=if(active)Accent2 else Muted,maxLines=1,overflow=TextOverflow.Ellipsis)
             }
         }
     }
@@ -177,7 +180,7 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
 
 @Composable fun Header(title:String,sub:String){
     Column(Modifier.padding(top=6.dp,bottom=4.dp)){
-        Text(title,fontSize=25.sp,fontWeight=FontWeight.Bold,letterSpacing=(-.4).sp)
+        Text(title,fontSize=25.sp,fontWeight=FontWeight.Bold,letterSpacing=(-.4).sp,color=TextMain)
         Text(sub,fontSize=13.sp,color=Muted,modifier=Modifier.padding(top=3.dp))
     }
 }
@@ -193,14 +196,15 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
     LazyColumn(Modifier.fillMaxSize().padding(horizontal=18.dp),verticalArrangement=Arrangement.spacedBy(14.dp)){
         item{Header("Command Overview","High-level posture across every mailbox — live from the SDR backend.")}
         item{Row(horizontalArrangement=Arrangement.spacedBy(10.dp)){
-            Kpi("Accounts",if(loading)"—" else accounts.size.toString(),Accent,Modifier.weight(1f))
-            Kpi("Unread",if(loading)"—" else accounts.sumOf{it.unread}.toString(),Warn,Modifier.weight(1f))
-            Kpi("Hot",if(loading)"—" else accounts.sumOf{it.hot}.toString(),Accent2,Modifier.weight(1f))
+            val live=error==null
+            Kpi("Accounts",if(loading||!live)"—" else accounts.size.toString(),Accent,Modifier.weight(1f))
+            Kpi("Unread",if(loading||!live)"—" else accounts.sumOf{it.unread}.toString(),Warn,Modifier.weight(1f))
+            Kpi("Hot",if(loading||!live)"—" else accounts.sumOf{it.hot}.toString(),Accent2,Modifier.weight(1f))
         }}
         error?.let{item{GlassCard{Text("Live data unavailable",color=Danger,fontWeight=FontWeight.Bold);Text(it,fontSize=11.sp,color=Muted,modifier=Modifier.padding(top=5.dp));Text("The UI remains usable; backend data will appear when the SDR API is healthy.",fontSize=11.sp,color=Muted,modifier=Modifier.padding(top=5.dp))}}}
         item{GlassCard{Text("PIPELINE",fontSize=11.sp,color=Muted,fontWeight=FontWeight.Bold,letterSpacing=1.2.sp);Spacer(Modifier.height(16.dp));Pipeline()}}
         item{GlassCard{
-            Row(verticalAlignment=Alignment.CenterVertically){Text("Backend",fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));Text(if(connected)"Connected" else "Unavailable",color=if(connected)Accent2 else Danger,fontSize=12.sp)}
+            Row(verticalAlignment=Alignment.CenterVertically){Text("Backend",fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));Text(if(connected)"Reachable" else "Unavailable",color=if(connected)Accent2 else Danger,fontSize=12.sp)}
             Text("Android → n8n → Zoho / AI Router",fontSize=12.sp,color=Muted,modifier=Modifier.padding(top=8.dp))
         }}
         item{Button(onClick={onNavigate(Screen.ACCOUNTS)},modifier=Modifier.fillMaxWidth(),shape=RoundedCornerShape(15.dp),colors=ButtonDefaults.buttonColors(containerColor=Accent)){Text("Open SDR Accounts",color=TextMain)}}
@@ -346,7 +350,7 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical=10.dp),horizontalArrangement=Arrangement.spacedBy(7.dp)){
             listOf("Pipeline status","What needs attention?","Summarise today").forEach{q->GlassPill{Text(q,fontSize=9.5.sp,color=Muted,modifier=Modifier.clickable{input=q})}}
         }
-        LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.spacedBy(9.dp),contentPadding=PaddingValues(bottom=10.dp)){
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(),verticalArrangement=Arrangement.Bottom,contentPadding=PaddingValues(top=12.dp,bottom=10.dp),reverseLayout=false){
             items(messages){m->
                 Surface(color=GlassStrong,shape=RoundedCornerShape(15.dp),border=BorderStroke(1.dp,Border),modifier=Modifier.fillMaxWidth()){
                     Text(m,Modifier.padding(13.dp),fontSize=12.5.sp,lineHeight=19.sp)
@@ -430,8 +434,8 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
             ConnectorField("CRM webhook / base",crm){crm=it}
             Text("Connectors",fontSize=10.sp,color=Muted2,fontWeight=FontWeight.Bold,modifier=Modifier.padding(top=12.dp,bottom=6.dp))
             ConnectorLine("n8n workflow engine","Required",true)
-            ConnectorLine("Zoho Mail","Managed by n8n",true)
-            ConnectorLine("AI Router","Managed by n8n",true)
+            ConnectorLine("Zoho Mail","Server-side",false)
+            ConnectorLine("AI Router","Server-side",false)
             ConnectorLine("Bitrix24 / CRM","Optional",crm.isNotBlank())
         }}
         item{GlassCard{
@@ -442,7 +446,7 @@ enum class Screen{DASHBOARD,ACCOUNTS,INBOX,OPS,CHAT,SETTINGS}
         item{GlassCard{
             Text("About SALYANT SDR",fontWeight=FontWeight.Bold)
             Text("Native Android command centre for the SALYANT Autonomous AI SDR.",fontSize=11.sp,color=Muted,modifier=Modifier.padding(top=6.dp))
-            Text("Version 0.1.0 · Release channel",fontSize=10.sp,color=Muted2,modifier=Modifier.padding(top=5.dp))
+            Text("Version 0.1.2 · Release channel",fontSize=10.sp,color=Muted2,modifier=Modifier.padding(top=5.dp))
         }}
         item{Spacer(Modifier.height(10.dp))}
     }
