@@ -29,7 +29,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
-private const val API_BASE = "https://www.salyant.co.uk/api/salyant-sdr"
+private const val API_BASE = "https://n8n.salyant.co.uk/webhook/salyant-sdr"
 private val Bg = Color(0xFF07080C)
 private val Surface = Color(0xFF12141C)
 private val Border = Color(0xFF292D3A)
